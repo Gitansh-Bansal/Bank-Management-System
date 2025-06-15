@@ -20,6 +20,7 @@ private:
     std::unordered_map<std::string, int> usernameToCustomerId;  // username -> customerId
     std::unordered_map<int, Account*> accounts;  // accountNumber -> Account*
     std::unordered_map<int, std::string> accountPasswords;  // accountNumber -> password
+    std::unordered_map<std::string, std::string> usernamePasswords; //username -> password
 
     // Private constructor for singleton
     Database(const std::string& dataDir);

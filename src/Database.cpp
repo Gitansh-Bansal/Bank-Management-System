@@ -65,6 +65,7 @@ bool Database::addCustomer(std::unique_ptr<Customer> customer, const std::string
         if (customer) {
             int customerId = customer->getId();
             usernameToCustomerId[username] = customerId;
+            usernamePasswords[username] = password;
             customers[customerId] = std::move(customer);
             saveCustomer(customers[customerId].get());
             authFile << username << ":" << password << ":" << customerId << std::endl;
@@ -77,6 +78,7 @@ bool Database::addCustomer(std::unique_ptr<Customer> customer, const std::string
         if (customer) {
             customers.erase(customer->getId());
             usernameToCustomerId.erase(username);
+            usernamePasswords.erase(username);
         }
         throw std::runtime_error("Failed to save customer data: " + std::string(e.what()));
     }
@@ -106,6 +108,14 @@ bool Database::removeCustomer(int customerId) {
         for (auto it = usernameToCustomerId.begin(); it != usernameToCustomerId.end();) {
             if (it->second == customerId) {
                 it = usernameToCustomerId.erase(it);
+            } else {
+                ++it;
+            }
+        }
+
+        for (auto it = usernamePasswords.begin(); it != usernamePasswords.end();) {
+            if (it->second == customerId) {
+                it = usernamePasswords.erase(it);
             } else {
                 ++it;
             }
@@ -206,29 +216,13 @@ bool Database::authenticate(const std::string& username, const std::string& pass
     }
     
     customerId = it->second;
-    
-    try {
-        std::ifstream file(getAuthFilePath());
-        if (!file.is_open()) {
-            return false;
-        }
 
-    std::string line;
-    while (std::getline(file, line)) {
-            std::stringstream ss(line);
-            std::string storedUsername, storedPassword, storedId;
-            std::getline(ss, storedUsername, ':');
-            std::getline(ss, storedPassword, ':');
-            std::getline(ss, storedId);
-            
-            if (storedUsername == username && storedPassword == password) {
-                return true;
-            }
-        }
-        return false;
-    } catch (const std::exception&) {
+    auto it2 = usernamePasswords.find(username);
+    if (it2 == usernamePasswords.end()){
         return false;
     }
+
+    return password == it->second;
 }
 
 bool Database::changePassword(int customerId, const std::string& oldPassword, const std::string& newPassword) {
@@ -461,9 +455,9 @@ void Database::saveAuthData() {
         throw std::runtime_error("Failed to open auth file for writing");
     }
     
-    // Save customer authentication data
+    // Save customer auth data in form of customer :username : password  : customerId
     for (const auto& [username, customerId] : usernameToCustomerId) {
-        file << "CUSTOMER:" << username << ":" << customerId << std::endl;
+        file << "CUSTOMER:" << username << ":" << usernamePasswords[username] << ":" << customerId << std::endl;
     }
     
     // Save account authentication data
@@ -480,15 +474,20 @@ void Database::loadAuthData() {
     
     std::string line;
     while (std::getline(file, line)) {
+        //customer :username : password  : customerId
         std::stringstream ss(line);
-        std::string type, id, password;
+        std::string type, id, password, customerId;
         std::getline(ss, type, ':');
         std::getline(ss, id, ':');
-        std::getline(ss, password);
         
         if (type == "CUSTOMER") {
-            usernameToCustomerId[id] = std::stoi(password);
+            std::getline(ss, password, ':');
+            std::getline(ss, customerId);
+            if (!id.empty() && !customerId.empty()) {
+                usernameToCustomerId[id] = std::stoi(customerId);
+            }
         } else if (type == "ACCOUNT") {
+            std::getline(ss, password);
             accountPasswords[std::stoi(id)] = password;
         }
     }

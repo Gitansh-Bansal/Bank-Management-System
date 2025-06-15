@@ -103,10 +103,13 @@ bool Database::removeCustomer(int customerId) {
         
         // Remove from maps
         customers.erase(it);
+
+        std::string username;
         
         // Remove from auth data
         for (auto it = usernameToCustomerId.begin(); it != usernameToCustomerId.end();) {
             if (it->second == customerId) {
+                username = it->first;
                 it = usernameToCustomerId.erase(it);
             } else {
                 ++it;
@@ -114,7 +117,7 @@ bool Database::removeCustomer(int customerId) {
         }
 
         for (auto it = usernamePasswords.begin(); it != usernamePasswords.end();) {
-            if (it->second == customerId) {
+            if (it->first == username) {
                 it = usernamePasswords.erase(it);
             } else {
                 ++it;
@@ -222,7 +225,7 @@ bool Database::authenticate(const std::string& username, const std::string& pass
         return false;
     }
 
-    return password == it->second;
+    return password == it2->second;
 }
 
 bool Database::changePassword(int customerId, const std::string& oldPassword, const std::string& newPassword) {

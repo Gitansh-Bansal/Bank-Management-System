@@ -9,7 +9,7 @@
 class Bank {
 private:
     std::string name;
-    std::vector<std::unique_ptr<Customer>> customers;
+    // std::vector<std::unique_ptr<Customer>> customers;
     std::vector<std::unique_ptr<Account>> accounts;
     int nextCustomerId;
     int nextAccountNumber;
@@ -22,9 +22,9 @@ public:
     int generateAccountNumber();
     
     // Customer management
-    Customer* addCustomer(const std::string& name, const std::string& phone);
-    Customer* findCustomer(int customerId) const;
-    bool removeCustomer(int customerId);
+    // Customer* addCustomer(const std::string& name, const std::string& phone);
+    // Customer* findCustomer(int customerId) const;
+    // bool removeCustomer(int customerId);
     
     // Account management
     Account* createSavingsAccount(int customerId, double initialBalance);

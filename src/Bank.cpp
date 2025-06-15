@@ -3,6 +3,7 @@
 #include "../include/CurrentAccount.h"
 #include "../include/AuditableSavingsAccount.h"
 #include "../include/Transaction.h"
+#include "../include/Database.h"
 #include <algorithm>
 #include <stdexcept>
 
@@ -21,36 +22,36 @@ int Bank::generateAccountNumber() {
     return nextAccountNumber++;
 }
 
-Customer* Bank::addCustomer(const std::string& name, const std::string& phone) {
-    auto customer = std::make_unique<Customer>(generateCustomerId(), name, phone);
-    Customer* customerPtr = customer.get();
-    customers.push_back(std::move(customer));
-    return customerPtr;
-}
+// Customer* Bank::addCustomer(const std::string& name, const std::string& phone) {
+//     auto customer = std::make_unique<Customer>(generateCustomerId(), name, phone);
+//     Customer* customerPtr = customer.get();
+//     customers.push_back(std::move(customer));
+//     return customerPtr;
+// }
 
-Customer* Bank::findCustomer(int customerId) const {
-    auto it = std::find_if(customers.begin(), customers.end(),
-        [customerId](const auto& customer) {
-            return customer->getId() == customerId;
-        });
-    return it != customers.end() ? it->get() : nullptr;
-}
+// Customer* Bank::findCustomer(int customerId) const {
+//     auto it = std::find_if(customers.begin(), customers.end(),
+//         [customerId](const auto& customer) {
+//             return customer->getId() == customerId;
+//         });
+//     return it != customers.end() ? it->get() : nullptr;
+// }
 
-bool Bank::removeCustomer(int customerId) {
-    auto it = std::find_if(customers.begin(), customers.end(),
-        [customerId](const auto& customer) {
-            return customer->getId() == customerId;
-        });
+// bool Bank::removeCustomer(int customerId) {
+//     auto it = std::find_if(customers.begin(), customers.end(),
+//         [customerId](const auto& customer) {
+//             return customer->getId() == customerId;
+//         });
     
-    if (it != customers.end()) {
-        customers.erase(it);
-        return true;
-    }
-    return false;
-}
+//     if (it != customers.end()) {
+//         customers.erase(it);
+//         return true;
+//     }
+//     return false;
+// }
 
 Account* Bank::createSavingsAccount(int customerId, double initialBalance) {
-    Customer* customer = findCustomer(customerId);
+    Customer* customer = Database::getInstance()->findCustomer(customerId);
     if (!customer) {
         throw std::runtime_error("Customer not found");
     }
@@ -62,7 +63,7 @@ Account* Bank::createSavingsAccount(int customerId, double initialBalance) {
 }
 
 Account* Bank::createCurrentAccount(int customerId, double initialBalance) {
-    Customer* customer = findCustomer(customerId);
+    Customer* customer = Database::getInstance()->findCustomer(customerId);
     if (!customer) {
         throw std::runtime_error("Customer not found");
     }
@@ -74,7 +75,7 @@ Account* Bank::createCurrentAccount(int customerId, double initialBalance) {
 }
 
 Account* Bank::createAuditableSavingsAccount(int customerId, double initialBalance) {
-    Customer* customer = findCustomer(customerId);
+    Customer* customer = Database::getInstance()->findCustomer(customerId);
     if (!customer) {
         throw std::runtime_error("Customer not found");
     }
@@ -144,9 +145,9 @@ const std::string& Bank::getName() const {
     return name;
 }
 
-const std::vector<std::unique_ptr<Customer>>& Bank::getCustomers() const {
-    return customers;
-}
+// const std::vector<std::unique_ptr<Customer>>& Bank::getCustomers() const {
+//     return customers;
+// }
 
 const std::vector<std::unique_ptr<Account>>& Bank::getAccounts() const {
     return accounts;

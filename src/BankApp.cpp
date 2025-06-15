@@ -96,25 +96,18 @@ void BankApp::handleCustomerRegistration() {
         return;
     }
 
-    // Add customer to bank first
-    currentCustomer = bank->addCustomer(name, phone);
-    if (!currentCustomer) {
-        std::cout << "Error: Failed to create customer." << std::endl;
-        return;
-    }
-
-    // Create a unique_ptr for the database
-    auto customerPtr = std::make_unique<Customer>(currentCustomer->getId(), name, phone);
-    
-    // Then add to database with authentication
+    int customerId = bank->generateCustomerId();
+    auto customerPtr = std::make_unique<Customer>(customerId, name, phone);
     if (Database::getInstance()->addCustomer(std::move(customerPtr), username, password)) {
-        std::cout << "Registration successful! Your customer ID is: " << currentCustomer->getId() << std::endl;
-        displayCustomerMenu();
+        currentCustomer = Database::getInstance()->findCustomer(customerId);
+        if (currentCustomer) {
+            std::cout << "Registration successful! Your customer ID is: " << currentCustomer->getId() << std::endl;
+            displayCustomerMenu();
+        } else {
+            std::cout << "Error: Customer not found after registration." << std::endl;
+        }
     } else {
         std::cout << "Registration failed." << std::endl;
-        // Remove customer from bank if database registration fails
-        bank->removeCustomer(currentCustomer->getId());
-        currentCustomer = nullptr;
     }
 }
 

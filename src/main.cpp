@@ -4,8 +4,8 @@
 
 int main() {
     try {
-        BankApp app("Nirma UniBank");
-        app.run();
+        BankApp* app = BankApp::getInstance("Nirma UniBank");
+        app->run();
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
         return 1;

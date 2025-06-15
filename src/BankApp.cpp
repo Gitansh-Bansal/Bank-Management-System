@@ -19,6 +19,10 @@ BankApp::BankApp(const std::string& bankName)
     Database::getInstance();
 }
 
+BankApp::~BankApp() {
+    delete Database::getInstance();
+}
+
 void BankApp::run() {
     while (true) {
         displayMainMenu();

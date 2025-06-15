@@ -13,9 +13,11 @@ private:
     std::unique_ptr<Bank> bank;
     Customer* currentCustomer;
     Account* currentAccount;
+    std::string bankName;
 
     // Private constructor for singleton
     BankApp(const std::string& bankName);
+    ~BankApp();  // Add destructor declaration
 
     // UI helper methods
     void displayMainMenu();

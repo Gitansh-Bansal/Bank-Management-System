@@ -49,6 +49,10 @@ std::string Database::getAuthFilePath() const {
     return dataDir + "/auth.txt";
 }
 
+std::string Database::getCounterFilePath() const {
+    return dataDir + "/counters.txt";
+}
+
 bool Database::addCustomer(std::unique_ptr<Customer> customer, const std::string& username, const std::string& password) {
     if (usernameExists(username)) {
         return false;
@@ -56,10 +60,10 @@ bool Database::addCustomer(std::unique_ptr<Customer> customer, const std::string
     
     try {
         // Save username and password
-        std::ofstream authFile(getAuthFilePath(), std::ios::app);
-        if (!authFile.is_open()) {
-            throw std::runtime_error("Failed to open auth file for writing");
-        }
+        // std::ofstream authFile(getAuthFilePath(), std::ios::app);
+        // if (!authFile.is_open()) {
+        //     throw std::runtime_error("Failed to open auth file for writing");
+        // }
         
         // If customer is nullptr, we're just adding authentication data
         if (customer) {
@@ -67,11 +71,11 @@ bool Database::addCustomer(std::unique_ptr<Customer> customer, const std::string
             usernameToCustomerId[username] = customerId;
             usernamePasswords[username] = password;
             customers[customerId] = std::move(customer);
-            saveCustomer(customers[customerId].get());
-            authFile << username << ":" << password << ":" << customerId << std::endl;
+            // saveCustomer(customers[customerId].get());
+            // authFile << username << ":" << password << ":" << customerId << std::endl;
         } else {
             // Just save the authentication data
-            authFile << username << ":" << password << ":" << std::endl;
+            // authFile << username << ":" << password << ":" << std::endl;
         }
             return true;
     } catch (const std::exception& e) {
@@ -138,7 +142,7 @@ bool Database::addAccount(std::unique_ptr<Account> account, const std::string& p
         accounts[accountNumber] = account.get();
         accountPasswords[accountNumber] = password;
         account->getOwner()->addAccount(std::move(account));
-        saveAccount(accounts[accountNumber]);
+        // saveAccount(accounts[accountNumber]);
         return true;
     } catch (const std::exception& e) {
         accounts.erase(accountNumber);
@@ -154,12 +158,14 @@ Account* Database::findAccount(int accountNumber) const {
 
 bool Database::removeAccount(int accountNumber) {
     auto it = accounts.find(accountNumber);
-    if (it == accounts.end()) {
+    auto it2 = accountPasswords.find(accountNumber);
+    if (it == accounts.end() || it2 == accountPasswords.end()) {
         return false;
     }
-    
+
     try {
         accounts.erase(it);
+        accountPasswords.erase(it2);
         saveAll();
         return true;
     } catch (const std::exception& e) {
@@ -281,6 +287,7 @@ void Database::saveAll() {
         saveCustomer(nullptr); // Save all customers
         saveAccount(nullptr);  // Save all accounts
         saveAuthData();
+        saveCounters();
     } catch (const std::exception& e) {
         throw std::runtime_error("Failed to save all data: " + std::string(e.what()));
     }
@@ -292,6 +299,7 @@ void Database::loadAll() {
         loadAccounts();
         loadTransactions();
         loadAuthData();
+        loadCounters();
     } catch (const std::exception& e) {
         throw std::runtime_error("Failed to load data: " + std::string(e.what()));
     }
@@ -404,8 +412,14 @@ void Database::loadAccounts() {
                 continue;
         }
         
-        accounts[account->getAccountNumber()] = account.get();
+        // First add to customer's accounts
         owner->addAccount(std::move(account));
+        
+        // Then get the pointer from the customer's accounts
+        Account* accountPtr = owner->findAccount(std::stoi(number));
+        if (accountPtr) {
+            accounts[accountPtr->getAccountNumber()] = accountPtr;
+        }
     }
 }
 
@@ -510,6 +524,70 @@ bool Database::verifyPassword(int accountNumber, const std::string& password) {
 Account* Database::getAccount(int accountNumber) {
     Database* db = getInstance();
     return db->findAccount(accountNumber);
+}
+
+void Database::saveCounters() const {
+    try {
+        std::ofstream file(getCounterFilePath());
+        if (!file.is_open()) {
+            throw std::runtime_error("Failed to open counter file for writing");
+        }
+        file << nextCustomerId << ":" << nextAccountNumber << std::endl;
+    } catch (const std::exception& e) {
+        throw std::runtime_error("Failed to save counters: " + std::string(e.what()));
+    }
+}
+
+void Database::loadCounters() {
+    try {
+        std::ifstream file(getCounterFilePath());
+        if (!file.is_open()) {
+            // If file doesn't exist, initialize with default values
+            nextCustomerId = 1000;
+            nextAccountNumber = 10000;
+            return;
+        }
+
+        std::string line;
+        if (std::getline(file, line)) {
+            std::stringstream ss(line);
+            std::string customerIdStr, accountNumberStr;
+            if (std::getline(ss, customerIdStr, ':') && std::getline(ss, accountNumberStr)) {
+                nextCustomerId = std::stoi(customerIdStr);
+                nextAccountNumber = std::stoi(accountNumberStr);
+            } else {
+                throw std::runtime_error("Invalid counter file format");
+            }
+        } else {
+            // If file is empty, initialize with default values
+            nextCustomerId = 1000;
+            nextAccountNumber = 10000;
+        }
+    } catch (const std::exception& e) {
+        throw std::runtime_error("Failed to load counters: " + std::string(e.what()));
+    }
+}
+
+int Database::getNextCustomerId() {
+    Database* db = getInstance();
+    return db->nextCustomerId;
+}
+
+int Database::getNextAccountNumber() {
+    Database* db = getInstance();
+    return db->nextAccountNumber;
+}
+
+void Database::incrementCustomerId() {
+    Database* db = getInstance();
+    db->nextCustomerId++;
+    db->saveCounters();
+}
+
+void Database::incrementAccountNumber() {
+    Database* db = getInstance();
+    db->nextAccountNumber++;
+    db->saveCounters();
 }
 
 Database::~Database() {

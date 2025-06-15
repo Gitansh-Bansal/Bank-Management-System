@@ -8,6 +8,7 @@
 #include <memory>
 #include <unordered_map>
 #include <mutex>
+#include <map>
 
 class Database {
 private:
@@ -18,9 +19,11 @@ private:
     // In-memory storage
     std::unordered_map<int, std::unique_ptr<Customer>> customers; // customerId -> customer
     std::unordered_map<std::string, int> usernameToCustomerId;  // username -> customerId
+    std::unordered_map<std::string, std::string> usernamePasswords; // username -> password
     std::unordered_map<int, Account*> accounts;  // accountNumber -> Account*
     std::unordered_map<int, std::string> accountPasswords;  // accountNumber -> password
-    std::unordered_map<std::string, std::string> usernamePasswords; //username -> password
+    int nextCustomerId;
+    int nextAccountNumber;
 
     // Private constructor for singleton
     Database(const std::string& dataDir);
@@ -31,6 +34,7 @@ private:
     std::string getAccountFilePath() const;
     std::string getTransactionFilePath() const;
     std::string getAuthFilePath() const;
+    std::string getCounterFilePath() const;
 
     // Save/Load operations
     void saveCustomer(const Customer* customer);
@@ -41,6 +45,8 @@ private:
     void loadTransactions();
     void saveAuthData();
     void loadAuthData();
+    void saveCounters() const;
+    void loadCounters();
 
 public:
     static Database* getInstance(const std::string& dataDir = "data");
@@ -71,6 +77,10 @@ public:
     // Static helper methods
     static bool verifyPassword(int accountNumber, const std::string& password);
     static Account* getAccount(int accountNumber);
+    static int getNextCustomerId();
+    static int getNextAccountNumber();
+    static void incrementCustomerId();
+    static void incrementAccountNumber();
     
     ~Database();
 };

@@ -6,21 +6,26 @@
 #include "../include/Database.h"
 #include <algorithm>
 #include <stdexcept>
+#include <iostream>
 
 Bank::Bank(const std::string& name)
-    : name(name), nextCustomerId(1000), nextAccountNumber(10000) {
+    : name(name) {
     if (name.empty()) {
         throw std::invalid_argument("Bank name cannot be empty");
     }
 }
 
-int Bank::generateCustomerId() {
-    return nextCustomerId++;
-}
+// int Bank::generateCustomerId() {
+//     int id = Database::getNextCustomerId();
+//     Database::incrementCustomerId();
+//     return id;
+// }
 
-int Bank::generateAccountNumber() {
-    return nextAccountNumber++;
-}
+// int Bank::generateAccountNumber() {
+//     int number = Database::getNextAccountNumber();
+//     Database::incrementAccountNumber();
+//     return number;
+// }
 
 // Customer* Bank::addCustomer(const std::string& name, const std::string& phone) {
 //     auto customer = std::make_unique<Customer>(generateCustomerId(), name, phone);
@@ -50,65 +55,58 @@ int Bank::generateAccountNumber() {
 //     return false;
 // }
 
-Account* Bank::createSavingsAccount(int customerId, double initialBalance) {
+std::unique_ptr<Account> Bank::createSavingsAccount(int customerId, double initialBalance) {
     Customer* customer = Database::getInstance()->findCustomer(customerId);
     if (!customer) {
         throw std::runtime_error("Customer not found");
     }
     
-    auto account = std::make_unique<SavingsAccount>(generateAccountNumber(), initialBalance, customer);
-    Account* accountPtr = account.get();
-    accounts.push_back(std::move(account));
-    return accountPtr;
+    int accountNumber = Database::getNextAccountNumber();
+    Database::incrementAccountNumber();
+    std::cout<<"Account Number fetch in Bank.cpp: "<<accountNumber<<std::endl; // correct ////////
+    auto account = std::make_unique<SavingsAccount>(accountNumber, initialBalance, customer);
+    std::cout<<"Created with: "<<account->getAccountNumber()<<std::endl;
+    return account;
 }
 
-Account* Bank::createCurrentAccount(int customerId, double initialBalance) {
+std::unique_ptr<Account> Bank::createCurrentAccount(int customerId, double initialBalance) {
     Customer* customer = Database::getInstance()->findCustomer(customerId);
     if (!customer) {
         throw std::runtime_error("Customer not found");
     }
     
-    auto account = std::make_unique<CurrentAccount>(generateAccountNumber(), initialBalance, customer);
-    Account* accountPtr = account.get();
-    accounts.push_back(std::move(account));
-    return accountPtr;
+    int accountNumber = Database::getNextAccountNumber();
+    Database::incrementAccountNumber();
+    auto account = std::make_unique<CurrentAccount>(accountNumber, initialBalance, customer);
+    return account;
 }
 
-Account* Bank::createAuditableSavingsAccount(int customerId, double initialBalance) {
+std::unique_ptr<Account> Bank::createAuditableSavingsAccount(int customerId, double initialBalance) {
     Customer* customer = Database::getInstance()->findCustomer(customerId);
     if (!customer) {
         throw std::runtime_error("Customer not found");
     }
     
-    auto account = std::make_unique<AuditableSavingsAccount>(generateAccountNumber(), initialBalance, customer);
-    Account* accountPtr = account.get();
-    accounts.push_back(std::move(account));
-    return accountPtr;
+    int accountNumber = Database::getNextAccountNumber();
+    Database::incrementAccountNumber();
+    auto account = std::make_unique<AuditableSavingsAccount>(accountNumber, initialBalance, customer);
+    return account;
 }
 
-Account* Bank::findAccount(int accountNumber) const {
-    auto it = std::find_if(accounts.begin(), accounts.end(),
-        [accountNumber](const auto& account) {
-            return account->getAccountNumber() == accountNumber;
-        });
-    return it != accounts.end() ? it->get() : nullptr;
-}
+// Account* Bank::findAccount(int accountNumber) const {
+//     auto it = std::find_if(accounts.begin(), accounts.end(),
+//         [accountNumber](const auto& account) {
+//             return account->getAccountNumber() == accountNumber;
+//         });
+//     return it != accounts.end() ? it->get() : nullptr;
+// }
 
-bool Bank::closeAccount(int accountNumber) {
-    auto it = std::find_if(accounts.begin(), accounts.end(),
-        [accountNumber](const auto& account) {
-            return account->getAccountNumber() == accountNumber;
-        });
-    
-    if (it != accounts.end()) {
-        accounts.erase(it);
-        return true;
-    }
-    return false;
-}
+// bool Bank::closeAccount(int accountNumber) {
+//     return Database::getInstance()->removeAccount(accountNumber);
+// }
 
 bool Bank::processDeposit(int accountNumber, double amount) {
-    Account* account = findAccount(accountNumber);
+    Account* account = Database::getInstance()->findAccount(accountNumber);
     if (!account) {
         return false;
     }
@@ -116,7 +114,7 @@ bool Bank::processDeposit(int accountNumber, double amount) {
 }
 
 bool Bank::processWithdrawal(int accountNumber, double amount) {
-    Account* account = findAccount(accountNumber);
+    Account* account = Database::getInstance()->findAccount(accountNumber);
     if (!account) {
         return false;
     }
@@ -124,8 +122,8 @@ bool Bank::processWithdrawal(int accountNumber, double amount) {
 }
 
 bool Bank::processTransfer(int fromAccount, int toAccount, double amount) {
-    Account* from = findAccount(fromAccount);
-    Account* to = findAccount(toAccount);
+    Account* from = Database::getInstance()->findAccount(fromAccount);
+    Account* to = Database::getInstance()->findAccount(toAccount);
     
     if (!from || !to) {
         return false;
@@ -135,11 +133,11 @@ bool Bank::processTransfer(int fromAccount, int toAccount, double amount) {
     return transfer->execute();
 }
 
-void Bank::applyMonthlyUpdates() {
-    for (auto& account : accounts) {
-        account->applyMonthlyUpdate();
-    }
-}
+// void Bank::applyMonthlyUpdates() {
+//     for (auto& account : accounts) {
+//         account->applyMonthlyUpdate();
+//     }
+// }
 
 const std::string& Bank::getName() const {
     return name;
@@ -149,6 +147,6 @@ const std::string& Bank::getName() const {
 //     return customers;
 // }
 
-const std::vector<std::unique_ptr<Account>>& Bank::getAccounts() const {
-    return accounts;
-} 
+// const std::vector<std::unique_ptr<Account>>& Bank::getAccounts() const {
+//     return accounts;
+// } 

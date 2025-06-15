@@ -10,16 +10,16 @@ class Bank {
 private:
     std::string name;
     // std::vector<std::unique_ptr<Customer>> customers;
-    std::vector<std::unique_ptr<Account>> accounts;
-    int nextCustomerId;
-    int nextAccountNumber;
+    // std::vector<std::unique_ptr<Account>> accounts;
+    // int nextCustomerId;
+    // int nextAccountNumber;
 
 public:
     Bank(const std::string& name);
     
     // ID generation
-    int generateCustomerId();
-    int generateAccountNumber();
+    // int generateCustomerId();
+    // int generateAccountNumber();
     
     // Customer management
     // Customer* addCustomer(const std::string& name, const std::string& phone);
@@ -27,11 +27,11 @@ public:
     // bool removeCustomer(int customerId);
     
     // Account management
-    Account* createSavingsAccount(int customerId, double initialBalance);
-    Account* createCurrentAccount(int customerId, double initialBalance);
-    Account* createAuditableSavingsAccount(int customerId, double initialBalance);
-    Account* findAccount(int accountNumber) const;
-    bool closeAccount(int accountNumber);
+    std::unique_ptr<Account> createSavingsAccount(int customerId, double initialBalance);
+    std::unique_ptr<Account> createCurrentAccount(int customerId, double initialBalance);
+    std::unique_ptr<Account> createAuditableSavingsAccount(int customerId, double initialBalance);
+    // Account* findAccount(int accountNumber) const;
+    // bool closeAccount(int accountNumber);
     
     // Transaction processing
     bool processDeposit(int accountNumber, double amount);
@@ -39,10 +39,10 @@ public:
     bool processTransfer(int fromAccount, int toAccount, double amount);
     
     // Monthly updates
-    void applyMonthlyUpdates();
+    // void applyMonthlyUpdates();
     
     // Getters
     const std::string& getName() const;
-    const std::vector<std::unique_ptr<Customer>>& getCustomers() const;
-    const std::vector<std::unique_ptr<Account>>& getAccounts() const;
+    // const std::vector<std::unique_ptr<Customer>>& getCustomers() const;
+    // const std::vector<std::unique_ptr<Account>>& getAccounts() const;
 }; 

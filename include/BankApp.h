@@ -15,6 +15,12 @@ private:
     Account* currentAccount;
     std::string bankName;
 
+    // Input validation
+    bool isValidName(const std::string& name);
+    bool isValidPhone(const std::string& phone);
+    bool isValidUsername(const std::string& username);
+    bool isValidPassword(const std::string& password);
+
     // Private constructor for singleton
     BankApp(const std::string& bankName);
     

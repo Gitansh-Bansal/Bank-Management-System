@@ -80,23 +80,107 @@ void BankApp::handleCustomerLogin() {
     }
 }
 
-void BankApp::handleCustomerRegistration() {
-    std::string name, phone, username, password;
-    std::cout << "\nEnter your name: ";
-    std::getline(std::cin, name);
-    std::cout << "Enter your phone number: ";
-    std::getline(std::cin, phone);
-    std::cout << "Choose a username: ";
-    std::getline(std::cin, username);
-    std::cout << "Choose a password: ";
-    std::getline(std::cin, password);
+bool BankApp::isValidName(const std::string& name) {
+    if (name.empty()) return false;
+    
+    // Check if name contains only letters and spaces
+    for (char c : name) {
+        if (!std::isalpha(c) && c != ' ') {
+            return false;
+        }
+    }
+    return true;
+}
 
-    if (Database::getInstance()->usernameExists(username)) {
-        std::cout << "Username already exists. Please choose another one." << std::endl;
-        return;
+bool BankApp::isValidPhone(const std::string& phone) {
+    if (phone.length() != 10) return false;
+    
+    // Check if phone contains only digits
+    for (char c : phone) {
+        if (!std::isdigit(c)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool BankApp::isValidUsername(const std::string& username) {
+    if (username.empty() || username.length() < 4) {
+        std::cout << "Invalid username! Username must be at least 4 characters." << std::endl;
+        return false;
+    }
+    
+    // Username can contain letters, numbers, and underscores
+    for (char c : username) {
+        if (!std::isalnum(c) && c != '_') {
+            std::cout << "Invalid username! Username can only contain letters, numbers, and underscores." << std::endl;
+            return false;
+        }
     }
 
-    int customerId = bank->generateCustomerId();
+    // Check if username already exists
+    if (Database::getInstance()->usernameExists(username)) {
+        std::cout << "Username already exists. Please choose another one." << std::endl;
+        return false;
+    }
+    
+    return true;
+}
+
+bool BankApp::isValidPassword(const std::string& password) {
+    if (password.empty() || password.length() < 6) return false;
+    
+    bool hasUpper = false;
+    bool hasLower = false;
+    bool hasDigit = false;
+    
+    for (char c : password) {
+        if (std::isupper(c)) hasUpper = true;
+        else if (std::islower(c)) hasLower = true;
+        else if (std::isdigit(c)) hasDigit = true;
+    }
+    
+    return hasUpper && hasLower && hasDigit;
+}
+
+void BankApp::handleCustomerRegistration() {
+    std::string name, phone, username, password;
+    
+    // Get and validate name
+    do {
+        std::cout << "\nEnter your name (letters and spaces only): ";
+        std::getline(std::cin, name);
+        if (!isValidName(name)) {
+            std::cout << "Invalid name! Name should only contain letters and spaces." << std::endl;
+        }
+    } while (!isValidName(name));
+    
+    // Get and validate phone
+    do {
+        std::cout << "Enter your phone number (10 digits): ";
+        std::getline(std::cin, phone);
+        if (!isValidPhone(phone)) {
+            std::cout << "Invalid phone number! Please enter exactly 10 digits." << std::endl;
+        }
+    } while (!isValidPhone(phone));
+    
+    // Get and validate username
+    do {
+        std::cout << "Choose a username (at least 4 characters, letters, numbers, and underscores only): ";
+        std::getline(std::cin, username);
+    } while (!isValidUsername(username));
+    
+    // Get and validate password
+    do {
+        std::cout << "Choose a password (at least 6 characters, must include uppercase, lowercase, and numbers): ";
+        std::getline(std::cin, password);
+        if (!isValidPassword(password)) {
+            std::cout << "Invalid password! Password must be at least 6 characters and include uppercase, lowercase, and numbers." << std::endl;
+        }
+    } while (!isValidPassword(password));
+
+    int customerId = Database::getNextCustomerId();
+    Database::incrementCustomerId();
     auto customerPtr = std::make_unique<Customer>(customerId, name, phone);
     if (Database::getInstance()->addCustomer(std::move(customerPtr), username, password)) {
         currentCustomer = Database::getInstance()->findCustomer(customerId);
@@ -170,7 +254,7 @@ void BankApp::handleAccountCreation() {
     std::getline(std::cin, password);
 
     try {
-        Account* account = nullptr;
+        std::unique_ptr<Account> account;
         switch (choice) {
             case 1:
                 account = bank->createSavingsAccount(currentCustomer->getId(), initialBalance);
@@ -188,7 +272,7 @@ void BankApp::handleAccountCreation() {
 
         if (account) {
             std::cout << "Account created successfully! Account number: " << account->getAccountNumber() << std::endl;
-            Database::getInstance()->addAccount(std::unique_ptr<Account>(account), password);
+            Database::getInstance()->addAccount(std::move(account), password);
         }
     } catch (const std::exception& e) {
         std::cout << "Error creating account: " << e.what() << std::endl;
@@ -202,7 +286,7 @@ void BankApp::handleAccountSelection() {
     std::cin >> accountNumber;
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
-    currentAccount = bank->findAccount(accountNumber);
+    currentAccount = currentCustomer->findAccount(accountNumber);
     if (currentAccount && currentAccount->getOwner() == currentCustomer) {
         displayAccountMenu();
     } else {
@@ -212,7 +296,7 @@ void BankApp::handleAccountSelection() {
 
 void BankApp::listAccounts() {
     std::cout << "\nYour Accounts:" << std::endl;
-    for (const auto& account : bank->getAccounts()) {
+    for (const auto& account : currentCustomer->getAccounts()) {
         if (account->getOwner() == currentCustomer) {
             std::cout << "Account Number: " << account->getAccountNumber()
                       << ", Balance: $" << std::fixed << std::setprecision(2) 
@@ -345,7 +429,7 @@ void BankApp::handleAccountStatement() {
 }
 
 void BankApp::handleAccountClosure() {
-    if (bank->closeAccount(currentAccount->getAccountNumber())) {
+    if (Database::getInstance()->removeAccount(currentAccount->getAccountNumber())) {
         std::cout << "Account closed successfully." << std::endl;
         currentAccount = nullptr;
     } else {

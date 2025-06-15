@@ -68,7 +68,7 @@ void BankApp::handleCustomerLogin() {
 
     int customerId;
     if (Database::getInstance()->authenticate(username, password, customerId)) {
-        currentCustomer = bank->findCustomer(customerId);
+        currentCustomer = Database::getInstance()->findCustomer(customerId);
         if (currentCustomer) {
             std::cout << "Login successful!" << std::endl;
             displayCustomerMenu();

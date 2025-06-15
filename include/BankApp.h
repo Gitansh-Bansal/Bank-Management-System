@@ -17,7 +17,7 @@ private:
 
     // Private constructor for singleton
     BankApp(const std::string& bankName);
-    ~BankApp();  // Add destructor declaration
+    
 
     // UI helper methods
     void displayMainMenu();
@@ -43,6 +43,7 @@ private:
 public:
     static BankApp* getInstance(const std::string& bankName = "MyBank");
     void run();
+    ~BankApp();  // Add destructor declaration
     
     // Transaction handling
     void performTransaction(int accountNumber, const std::string& type);

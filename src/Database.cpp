@@ -340,6 +340,7 @@ void Database::saveTransaction(const Account* account, const ITransaction* trans
 void Database::loadCustomers() {
     std::ifstream file(getCustomerFilePath());
     if (!file.is_open()) {
+        std::cout<<"customer file not found!"<<std::endl;
         return;
     }
 
@@ -479,19 +480,20 @@ void Database::loadAuthData() {
     while (std::getline(file, line)) {
         //customer :username : password  : customerId
         std::stringstream ss(line);
-        std::string type, id, password, customerId;
+        std::string type, username, password, customerId;
         std::getline(ss, type, ':');
-        std::getline(ss, id, ':');
+        std::getline(ss, username, ':');
         
         if (type == "CUSTOMER") {
             std::getline(ss, password, ':');
             std::getline(ss, customerId);
-            if (!id.empty() && !customerId.empty()) {
-                usernameToCustomerId[id] = std::stoi(customerId);
+            if (!username.empty() && !customerId.empty()) {
+                usernameToCustomerId[username] = std::stoi(customerId);
+                usernamePasswords[username] = password;  // Also store the password
             }
         } else if (type == "ACCOUNT") {
             std::getline(ss, password);
-            accountPasswords[std::stoi(id)] = password;
+            accountPasswords[std::stoi(username)] = password;
         }
     }
 }

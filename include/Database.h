@@ -16,7 +16,7 @@ private:
     std::string dataDir;
     
     // In-memory storage
-    std::unordered_map<int, std::unique_ptr<Customer>> customers;
+    std::unordered_map<int, std::unique_ptr<Customer>> customers; // customerId -> customer
     std::unordered_map<std::string, int> usernameToCustomerId;  // username -> customerId
     std::unordered_map<int, Account*> accounts;  // accountNumber -> Account*
     std::unordered_map<int, std::string> accountPasswords;  // accountNumber -> password

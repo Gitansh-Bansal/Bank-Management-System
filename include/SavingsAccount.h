@@ -11,7 +11,8 @@ public:
     static double getDefaultInterestRate() { return DEFAULT_INTEREST_RATE; }
     
     SavingsAccount(int accNo, double initialBalance, Customer* owner,
-                  double interestRate = DEFAULT_INTEREST_RATE);
+                  double interestRate = DEFAULT_INTEREST_RATE,
+                  AccountType type = AccountType::SAVINGS);
     
     bool deposit(double amount) override;
     bool withdraw(double amount) override;

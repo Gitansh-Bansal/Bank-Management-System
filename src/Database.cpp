@@ -391,7 +391,9 @@ void Database::loadAccounts() {
                 account = std::make_unique<SavingsAccount>(
                     std::stoi(number),
                     std::stod(balance),
-                    owner
+                    owner,
+                    SavingsAccount::getDefaultInterestRate(),
+                    AccountType::SAVINGS
                 );
                 break;
             case static_cast<int>(AccountType::CURRENT):

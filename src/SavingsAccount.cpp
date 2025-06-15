@@ -1,8 +1,8 @@
 #include "../include/SavingsAccount.h"
 #include <stdexcept>
 
-SavingsAccount::SavingsAccount(int accNo, double initialBalance, Customer* owner, double interestRate)
-    : Account(accNo, initialBalance, owner, AccountType::SAVINGS), interestRate(interestRate) {
+SavingsAccount::SavingsAccount(int accNo, double initialBalance, Customer* owner, double interestRate, AccountType type)
+    : Account(accNo, initialBalance, owner, type), interestRate(interestRate) {
     if (interestRate < 0) {
         throw std::invalid_argument("Interest rate cannot be negative");
     }

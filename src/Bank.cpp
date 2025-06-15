@@ -64,7 +64,7 @@ std::unique_ptr<Account> Bank::createSavingsAccount(int customerId, double initi
     int accountNumber = Database::getNextAccountNumber();
     Database::incrementAccountNumber();
     std::cout<<"Account Number fetch in Bank.cpp: "<<accountNumber<<std::endl; // correct ////////
-    auto account = std::make_unique<SavingsAccount>(accountNumber, initialBalance, customer);
+    auto account = std::make_unique<SavingsAccount>(accountNumber, initialBalance, customer, SavingsAccount::getDefaultInterestRate(), AccountType::SAVINGS);
     std::cout<<"Created with: "<<account->getAccountNumber()<<std::endl;
     return account;
 }

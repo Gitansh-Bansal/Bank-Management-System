@@ -1,5 +1,6 @@
 #include "../include/BankApp.h"
 #include "../include/Database.h"
+#include "../include/Transaction.h"
 #include <iostream>
 #include <limits>
 #include <iomanip>
@@ -257,13 +258,13 @@ void BankApp::handleAccountCreation() {
         std::unique_ptr<Account> account;
         switch (choice) {
             case 1:
-                account = bank->createSavingsAccount(currentCustomer->getId(), initialBalance);
+                account = bank->createSavingsAccount(currentCustomer->getId(), 0);
                 break;
             case 2:
-                account = bank->createCurrentAccount(currentCustomer->getId(), initialBalance);
+                account = bank->createCurrentAccount(currentCustomer->getId(), 0);
                 break;
             case 3:
-                account = bank->createAuditableSavingsAccount(currentCustomer->getId(), initialBalance);
+                account = bank->createAuditableSavingsAccount(currentCustomer->getId(), 0);
                 break;
             default:
                 std::cout << "Invalid account type." << std::endl;
@@ -271,8 +272,20 @@ void BankApp::handleAccountCreation() {
         }
 
         if (account) {
-            std::cout << "Account created successfully! Account number: " << account->getAccountNumber() << std::endl;
+            int accnum = account->getAccountNumber();
+            std::cout << "Account created successfully! Account number: " << accnum << std::endl;
+            auto deposit = std::make_unique<Deposit>(account.get(), initialBalance);
             Database::getInstance()->addAccount(std::move(account), password);
+            if (deposit->execute()) {
+                if (Database::getInstance()->addTransaction(accnum, std::move(deposit))) {
+                    std::cout << "Initial deposit of $" << initialBalance << " successful." << std::endl;
+                } else {
+                    std::cout << "Failed to record initial deposit transaction." << std::endl;
+                }
+            } else {
+                std::cout << "Initial deposit failed." << std::endl;
+            }
+            
         }
     } catch (const std::exception& e) {
         std::cout << "Error creating account: " << e.what() << std::endl;
@@ -288,7 +301,7 @@ void BankApp::handleAccountSelection() {
 
     currentAccount = currentCustomer->findAccount(accountNumber);
     if (currentAccount && currentAccount->getOwner() == currentCustomer) {
-        displayAccountMenu();
+        transactionFun(accountNumber);
     } else {
         std::cout << "Invalid account number." << std::endl;
     }
@@ -298,135 +311,148 @@ void BankApp::listAccounts() {
     std::cout << "\nYour Accounts:" << std::endl;
     for (const auto& account : currentCustomer->getAccounts()) {
         if (account->getOwner() == currentCustomer) {
+            std::string accountType;
+            switch (account->getType()) {
+                case AccountType::SAVINGS:
+                    accountType = "Savings";
+                    break;
+                case AccountType::CURRENT:
+                    accountType = "Current";
+                    break;
+                case AccountType::AUDITABLE_SAVINGS:
+                    accountType = "Auditable Savings";
+                    break;
+            }
             std::cout << "Account Number: " << account->getAccountNumber()
+                      << ", Type: " << accountType
                       << ", Balance: $" << std::fixed << std::setprecision(2) 
                       << account->getBalance() << std::endl;
         }
     }
 }
 
-void BankApp::displayAccountMenu() {
-    while (true) {
-        std::cout << "\n┌─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┐" << std::endl;
-        std::cout << "│                             │" << std::endl;
-        std::cout << "│        Account Menu         │" << std::endl;
-        std::cout << "│                             │" << std::endl;
-        std::cout << "├─────────────────────────────┤" << std::endl;
-        std::cout << "│                             │" << std::endl;
-        std::cout << "│  1. Deposit                 │" << std::endl;
-        std::cout << "│  2. Withdraw                │" << std::endl;
-        std::cout << "│  3. Transfer                │" << std::endl;
-        std::cout << "│  4. Statement               │" << std::endl;
-        std::cout << "│  5. Close Account           │" << std::endl;
-        std::cout << "│  6. Back to Customer Menu   │" << std::endl;
-        std::cout << "│                             │" << std::endl;
-        std::cout << "└─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┘" << std::endl << std::endl;
+// void BankApp::displayAccountMenu() {
+//     while (true) {
+//         std::cout << "\n┌─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┐" << std::endl;
+//         std::cout << "│                             │" << std::endl;
+//         std::cout << "│        Account Menu         │" << std::endl;
+//         std::cout << "│                             │" << std::endl;
+//         std::cout << "├─────────────────────────────┤" << std::endl;
+//         std::cout << "│                             │" << std::endl;
+//         std::cout << "│  1. Deposit                 │" << std::endl;
+//         std::cout << "│  2. Withdraw                │" << std::endl;
+//         std::cout << "│  3. Transfer                │" << std::endl;
+//         std::cout << "│  4. Statement               │" << std::endl;
+//         std::cout << "│  5. Close Account           │" << std::endl;
+//         std::cout << "│  6. Back to Customer Menu   │" << std::endl;
+//         std::cout << "│                             │" << std::endl;
+//         std::cout << "└─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┘" << std::endl << std::endl;
 
-        int choice;
-        std::cin >> choice;
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+//         int choice;
+//         std::cin >> choice;
+//         std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
-        switch (choice) {
-            case 1:
-                handleDeposit();
-                break;
-            case 2:
-                handleWithdrawal();
-                break;
-            case 3:
-                handleTransfer();
-                break;
-            case 4:
-                handleAccountStatement();
-                break;
-            case 5:
-                handleAccountClosure();
-                return;
-            case 6:
-                currentAccount = nullptr;
-                return;
-            default:
-                std::cout << "Invalid choice!" << std::endl;
-        }
-    }
-}
+//         switch (choice) {
+//             case 1:
+//                 handleDeposit();
+//                 break;
+//             case 2:
+//                 handleWithdrawal();
+//                 break;
+//             case 3:
+//                 handleTransfer();
+//                 break;
+//             case 4:
+//                 handleAccountStatement();
+//                 break;
+//             case 5:
+//                 handleAccountClosure();
+//                 return;
+//             case 6:
+//                 currentAccount = nullptr;
+//                 return;
+//             default:
+//                 std::cout << "Invalid choice!" << std::endl;
+//         }
+//     }
+// }
 
-void BankApp::handleDeposit() {
-    std::cout << "Enter amount to deposit: $";
-    double amount;
-    std::cin >> amount;
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+// void BankApp::handleDeposit() {
+//     std::cout << "Enter amount to deposit: $";
+//     double amount;
+//     std::cin >> amount;
+//     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
-    if (bank->processDeposit(currentAccount->getAccountNumber(), amount)) {
-        std::cout << "Deposit successful!" << std::endl;
-    } else {
-        std::cout << "Deposit failed." << std::endl;
-    }
-}
+//     if (bank->processDeposit(currentAccount->getAccountNumber(), amount)) {
+//         std::cout << "Deposit successful!" << std::endl;
+//     } else {
+//         std::cout << "Deposit failed." << std::endl;
+//     }
+// }
 
-void BankApp::handleWithdrawal() {
-    std::cout << "Enter amount to withdraw: $";
-    double amount;
-    std::cin >> amount;
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+// void BankApp::handleWithdrawal() {
+//     std::cout << "Enter amount to withdraw: $";
+//     double amount;
+//     std::cin >> amount;
+//     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
-    if (bank->processWithdrawal(currentAccount->getAccountNumber(), amount)) {
-        std::cout << "Withdrawal successful!" << std::endl;
-    } else {
-        std::cout << "Withdrawal failed." << std::endl;
-    }
-}
+//     if (bank->processWithdrawal(currentAccount->getAccountNumber(), amount)) {
+//         std::cout << "Withdrawal successful!" << std::endl;
+//     } else {
+//         std::cout << "Withdrawal failed." << std::endl;
+//     }
+// }
 
-void BankApp::handleTransfer() {
-    std::cout << "Enter recipient account number: ";
-    int toAccount;
-    std::cin >> toAccount;
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+// void BankApp::handleTransfer() {
+//     std::cout << "Enter recipient account number: ";
+//     int toAccount;
+//     std::cin >> toAccount;
+//     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
-    std::cout << "Enter amount to transfer: $";
-    double amount;
-    std::cin >> amount;
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+//     std::cout << "Enter amount to transfer: $";
+//     double amount;
+//     std::cin >> amount;
+//     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
-    if (bank->processTransfer(currentAccount->getAccountNumber(), toAccount, amount)) {
-        std::cout << "Transfer successful!" << std::endl;
-    } else {
-        std::cout << "Transfer failed." << std::endl;
-    }
-}
+//     if (bank->processTransfer(currentAccount->getAccountNumber(), toAccount, amount)) {
+//         std::cout << "Transfer successful!" << std::endl;
+//     } else {
+//         std::cout << "Transfer failed." << std::endl;
+//     }
+// }
 
-void BankApp::handleAccountStatement() {
-    if (!currentAccount) {
-        std::cout << "No account selected." << std::endl;
-        return;
-    }
+// void BankApp::handleAccountStatement() {
+//     if (!currentAccount) {
+//         std::cout << "No account selected." << std::endl;
+//         return;
+//     }
 
-    std::cout << "\n┌─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┐" << std::endl;
-    std::cout << "│                     Account Statement                    │" << std::endl;
-    std::cout << "├─────────────────────────────────────────────────────────┤" << std::endl;
-    std::cout << "│ Account Number: " << std::setw(40) << currentAccount->getAccountNumber() << "│" << std::endl;
-    std::cout << "│ Account Type: " << std::setw(42) << (currentAccount->getType() == AccountType::SAVINGS ? "Savings" :
-                                                         currentAccount->getType() == AccountType::CURRENT ? "Current" :
-                                                         "Auditable Savings") << "│" << std::endl;
-    std::cout << "│ Current Balance: $" << std::fixed << std::setprecision(2) << std::setw(36) 
-              << currentAccount->getBalance() << "│" << std::endl;
-    std::cout << "├─────────────────────────────────────────────────────────┤" << std::endl;
-    std::cout << "│                     Transaction History                  │" << std::endl;
-    std::cout << "├─────────────────────────────────────────────────────────┤" << std::endl;
+//     std::cout << "\n┌─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┐" << std::endl;
+//     std::cout << "│                     Account Statement                    │" << std::endl;
+//     std::cout << "├─────────────────────────────────────────────────────────┤" << std::endl;
+//     std::cout << "│ Account Number: " << std::setw(40) << currentAccount->getAccountNumber() << "│" << std::endl;
+//     std::cout << "│ Account Type: " << std::setw(42) << (currentAccount->getType() == AccountType::SAVINGS ? "Savings" :
+//                                                          currentAccount->getType() == AccountType::CURRENT ? "Current" :
+//                                                          "Auditable Savings") << "│" << std::endl;
+//     std::cout << "│ Current Balance: $" << std::fixed << std::setprecision(2) << std::setw(36) 
+//               << currentAccount->getBalance() << "│" << std::endl;
+//     std::cout << "├─────────────────────────────────────────────────────────┤" << std::endl;
+//     std::cout << "│                     Transaction History                  │" << std::endl;
+//     std::cout << "├─────────────────────────────────────────────────────────┤" << std::endl;
 
-    const auto& transactions = currentAccount->getTransactionHistory();
-    if (transactions.empty()) {
-        std::cout << "│ No transactions found.                                    │" << std::endl;
-    } else {
-        for (const auto& transaction : transactions) {
-            std::cout << "│ " << std::left << std::setw(20) << transaction->getTimestamp()
-                      << std::setw(20) << transaction->getDescription()
-                      << std::right << std::setw(15) << "$" << std::fixed << std::setprecision(2)
-                      << transaction->getAmount() << " │" << std::endl;
-        }
-    }
-    std::cout << "└─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┘" << std::endl;
-}
+//     const auto& transactions = currentAccount->getTransactionHistory();
+//     if (transactions.empty()) {
+//         std::cout << "│ No transactions found.                                    │" << std::endl;
+//     } else {
+//         for (const auto& transaction : transactions) {
+//             std::cout << "│ " << std::left << std::setw(20) << transaction->getTimestamp()
+//                       << std::setw(20) << transaction->getDescription()
+//                       << std::right << std::setw(15) << "$" << std::fixed << std::setprecision(2)
+//                       << transaction->getAmount() << " │" << std::endl;
+//         }
+//     }
+//     std::cout << "└─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┘" << std::endl;
+// }
 
 void BankApp::handleAccountClosure() {
     if (Database::getInstance()->removeAccount(currentAccount->getAccountNumber())) {
@@ -437,20 +463,20 @@ void BankApp::handleAccountClosure() {
     }
 }
 
-void BankApp::performTransaction(int accountNumber, const std::string& type) {
-    currentAccount = Database::getAccount(accountNumber);
-    if (!currentAccount) {
-        std::cout << "Account not found." << std::endl;
-        return;
-    }
+// void BankApp::performTransaction(int accountNumber, const std::string& type) {
+//     currentAccount = Database::getAccount(accountNumber);
+//     if (!currentAccount) {
+//         std::cout << "Account not found." << std::endl;
+//         return;
+//     }
 
-    if (type == "deposit") {
-        handleDeposit();
-    } else if (type == "withdrawal") {
-        handleWithdrawal();
-    } else if (type == "transfer") {
-        handleTransfer();
-    } else {
-        std::cout << "Invalid transaction type." << std::endl;
-    }
-} 
+//     if (type == "deposit") {
+//         handleDeposit();
+//     } else if (type == "withdrawal") {
+//         handleWithdrawal();
+//     } else if (type == "transfer") {
+//         handleTransfer();
+//     } else {
+//         std::cout << "Invalid transaction type." << std::endl;
+//     }
+// } 

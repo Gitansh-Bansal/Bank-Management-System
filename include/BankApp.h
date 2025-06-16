@@ -28,7 +28,7 @@ private:
     // UI helper methods
     void displayMainMenu();
     void displayCustomerMenu();
-    void displayAccountMenu();
+    // void displayAccountMenu();
     void listAccounts();
     
     // Customer operations
@@ -39,11 +39,11 @@ private:
     // Account operations
     void handleAccountCreation();
     void handleAccountSelection();
-    void handleBalanceInquiry();
-    void handleDeposit();
-    void handleWithdrawal();
-    void handleTransfer();
-    void handleAccountStatement();
+    // void handleBalanceInquiry();
+    // void handleDeposit();
+    // void handleWithdrawal();
+    // void handleTransfer();
+    // void handleAccountStatement();
     void handleAccountClosure();
 
 public:
@@ -52,5 +52,5 @@ public:
     ~BankApp();  // Add destructor declaration
     
     // Transaction handling
-    void performTransaction(int accountNumber, const std::string& type);
+    // void performTransaction(int accountNumber, const std::string& type);
 }; 

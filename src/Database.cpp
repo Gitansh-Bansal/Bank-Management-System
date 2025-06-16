@@ -7,6 +7,7 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <iomanip>
 
 // Initialize static members
 Database* Database::instance = nullptr;
@@ -180,42 +181,152 @@ bool Database::addTransaction(int accountNumber, std::unique_ptr<ITransaction> t
     }
     
     try {
-        account->addTransaction(std::move(transaction));
-        saveTransaction(account, transaction.get());
+        saveTransaction(account, transaction.get());      // Save before moving
+        // account->addTransaction(std::move(transaction));  // Move after saving
         return true;
     } catch (const std::exception& e) {
         throw std::runtime_error("Failed to add transaction: " + std::string(e.what()));
     }
 }
 
-std::vector<std::unique_ptr<ITransaction>> Database::getTransactions(int accountNumber) const {
-    Account* account = findAccount(accountNumber);
-    if (!account) {
-        return {};
+void Database::getTransactions(int accountNumber, std::ostream& out) const {
+    std::ifstream file(getTransactionFilePath());
+    if (!file.is_open()) {
+        out << "Error: Could not open transactions file." << std::endl;
+        return;
     }
-    // Create a copy of the transaction history
-    std::vector<std::unique_ptr<ITransaction>> result;
-    for (const auto& transaction : account->getTransactionHistory()) {
-        // Create a new transaction of the same type
-        switch (transaction->getType()) {
-            case TransactionType::DEPOSIT:
-                result.push_back(std::make_unique<Deposit>(account, transaction->getAmount()));
-                break;
-            case TransactionType::WITHDRAWAL:
-                result.push_back(std::make_unique<Withdrawal>(account, transaction->getAmount()));
-                break;
-            case TransactionType::TRANSFER:
-                // For transfers, we need to find the target account
-                std::string desc = transaction->getDescription();
-                std::string targetAccountStr = desc.substr(desc.find("to account ") + 11);
-                Account* toAccount = findAccount(std::stoi(targetAccountStr));
-                if (toAccount) {
-                    result.push_back(std::make_unique<Transfer>(account, toAccount, transaction->getAmount()));
-                }
-                break;
+
+    // Box-drawing characters
+    const char* topLeft = "┌";
+    const char* topRight = "┐";
+    const char* bottomLeft = "└";
+    const char* bottomRight = "┘";
+    const char* horizontal = "─";
+    const char* vertical = "│";
+    const char* tDown = "┬";
+    const char* tUp = "┴";
+    const char* tRight = "├";
+    const char* tLeft = "┤";
+    const char* cross = "┼";
+
+    // Column widths
+    const int dateWidth = 20;
+    const int typeWidth = 15;
+    const int amountWidth = 15;
+    const int relatedWidth = 15;
+    const int balanceWidth = 15;
+
+    // Print header
+    out << "\nAccount Statement for Account #" << accountNumber << "\n";
+    
+    // Print top border
+    out << topLeft;
+    for (int i = 0; i < dateWidth; i++) out << horizontal;
+    out << tDown;
+    for (int i = 0; i < typeWidth; i++) out << horizontal;
+    out << tDown;
+    for (int i = 0; i < amountWidth; i++) out << horizontal;
+    out << tDown;
+    for (int i = 0; i < relatedWidth; i++) out << horizontal;
+    out << tDown;
+    for (int i = 0; i < balanceWidth; i++) out << horizontal;
+    out << topRight << "\n";
+
+    // Print header row
+    out << vertical << std::left << std::setw(dateWidth) << "Date & Time"
+        << vertical << std::setw(typeWidth) << "Type"
+        << vertical << std::setw(amountWidth) << "Amount"
+        << vertical << std::setw(relatedWidth) << "Related Account"
+        << vertical << std::setw(balanceWidth) << "Balance"
+        << vertical << "\n";
+
+    // Print separator
+    out << tRight;
+    for (int i = 0; i < dateWidth; i++) out << horizontal;
+    out << cross;
+    for (int i = 0; i < typeWidth; i++) out << horizontal;
+    out << cross;
+    for (int i = 0; i < amountWidth; i++) out << horizontal;
+    out << cross;
+    for (int i = 0; i < relatedWidth; i++) out << horizontal;
+    out << cross;
+    for (int i = 0; i < balanceWidth; i++) out << horizontal;
+    out << tLeft << "\n";
+
+    std::string line;
+    double runningBalance = 0.0;
+    while (std::getline(file, line)) {
+        std::stringstream ss(line);
+        std::string accNo, timestamp, type, amount, relatedAcc;
+        
+        // Parse the line
+        std::getline(ss, accNo, ':');
+        std::getline(ss, timestamp, ':');
+        std::getline(ss, type, ':');
+        std::getline(ss, amount, ':');
+        std::getline(ss, relatedAcc, ':');
+
+        // Check if this transaction belongs to our account
+        if (std::stoi(accNo) == accountNumber) {
+            double amountValue = std::stod(amount);
+            std::string transactionType;
+            
+            // Determine transaction type and update balance
+            switch (std::stoi(type)) {
+                case 0: // Deposit
+                    transactionType = "Deposit";
+                    runningBalance += amountValue;
+                    break;
+                case 1: // Withdrawal
+                    transactionType = "Withdrawal";
+                    runningBalance -= amountValue;
+                    break;
+                case 2: // Transfer
+                    if (amountValue > 0) {
+                        transactionType = "Transfer In";
+                        runningBalance += amountValue;
+                    } else {
+                        transactionType = "Transfer Out";
+                        runningBalance += amountValue; // amount is already negative
+                    }
+                    break;
+                default:
+                    transactionType = "Unknown";
+                    break;
+            }
+
+            // Print transaction details
+            out << vertical << std::left 
+                << std::setw(dateWidth) << timestamp 
+                << vertical << std::setw(typeWidth) << transactionType 
+                << vertical << std::setw(amountWidth) << std::fixed << std::setprecision(2) << std::abs(amountValue);
+            
+            // Print related account for transfers
+            if (std::stoi(type) == 2) {
+                out << vertical << std::setw(relatedWidth) << relatedAcc;
+            } else {
+                out << vertical << std::setw(relatedWidth) << "-";
+            }
+            
+            out << vertical << std::setw(balanceWidth) << std::fixed << std::setprecision(2) << runningBalance 
+                << vertical << "\n";
         }
     }
-    return result;
+
+    // Print bottom border
+    out << bottomLeft;
+    for (int i = 0; i < dateWidth; i++) out << horizontal;
+    out << tUp;
+    for (int i = 0; i < typeWidth; i++) out << horizontal;
+    out << tUp;
+    for (int i = 0; i < amountWidth; i++) out << horizontal;
+    out << tUp;
+    for (int i = 0; i < relatedWidth; i++) out << horizontal;
+    out << tUp;
+    for (int i = 0; i < balanceWidth; i++) out << horizontal;
+    out << bottomRight << "\n";
+
+    file.close();
 }
 
 bool Database::authenticate(const std::string& username, const std::string& password, int& customerId) const {
@@ -297,7 +408,7 @@ void Database::loadAll() {
     try {
         loadCustomers();
         loadAccounts();
-        loadTransactions();
+        // loadTransactions();
         loadAuthData();
         loadCounters();
     } catch (const std::exception& e) {
@@ -333,16 +444,53 @@ void Database::saveAccount(const Account* account) {
 }
 
 void Database::saveTransaction(const Account* account, const ITransaction* transaction) {
+    try {
+        // Ensure the data directory exists
+        createDataDirectory();
+        
+        // Open file in append mode
+        std::ofstream file(getTransactionFilePath(), std::ios::app);
+        if (!file.is_open()) {
+            throw std::runtime_error("Failed to open transaction file for writing");
+        }
+
+        if (static_cast<int>(transaction->getType()) == 2) {
+            saveTransferTransaction(transaction);
+            return;
+        }
+        
+        file << account->getAccountNumber() << ":" 
+             << transaction->getTimestamp() << ":"
+             << static_cast<int>(transaction->getType()) << ":"
+             << transaction->getAmount() << std::endl;
+             
+        if (!file.good()) {
+            throw std::runtime_error("Failed to write transaction data");
+        }
+    } catch (const std::exception& e) {
+        throw std::runtime_error("Failed to save transaction: " + std::string(e.what()));
+    }
+}
+
+void Database::saveTransferTransaction(const ITransaction* transaction) {
     std::ofstream file(getTransactionFilePath(), std::ios::app);
     if (!file.is_open()) {
         throw std::runtime_error("Failed to open transaction file for writing");
     }
-    
-    file << account->getAccountNumber() << ":" 
+    const Transfer* transfer = dynamic_cast<const Transfer*>(transaction);
+
+    //save in format accountNumber:timestamp:type:amount:toAccountNumber
+    file << transfer->getFromAccount() << ":"
+         << transaction->getTimestamp() << ":"
+         << static_cast<int>(transaction->getType()) << ":"
+         << (-1 * transaction->getAmount()) << ":"
+         << transfer->getToAccount() << std::endl;
+
+    file << transfer->getToAccount() << ":"
          << transaction->getTimestamp() << ":"
          << static_cast<int>(transaction->getType()) << ":"
          << transaction->getAmount() << ":"
-         << transaction->getDescription() << std::endl;
+         << transfer->getFromAccount() << std::endl;
 }
 
 void Database::loadCustomers() {
@@ -425,49 +573,48 @@ void Database::loadAccounts() {
     }
 }
 
-void Database::loadTransactions() {
-    std::ifstream file(getTransactionFilePath());
-    if (!file.is_open()) {
-        return;
-    }
+// void Database::loadTransactions() {
+//     std::ifstream file(getTransactionFilePath());
+//     if (!file.is_open()) {
+//         return;
+//     }
 
-    std::string line;
-    while (std::getline(file, line)) {
-        std::stringstream ss(line);
-        std::string accountNumber, timestamp, type, amount, description;
-        std::getline(ss, accountNumber, ':');
-        std::getline(ss, timestamp, ':');
-        std::getline(ss, type, ':');
-        std::getline(ss, amount, ':');
-        std::getline(ss, description);
+//     std::string line;
+//     while (std::getline(file, line)) {
+//         std::stringstream ss(line);
+//         std::string accountNumber, timestamp, type, amount;
+//         std::getline(ss, accountNumber, ':');
+//         std::getline(ss, timestamp, ':');
+//         std::getline(ss, type, ':');
+//         std::getline(ss, amount);
         
-        Account* account = findAccount(std::stoi(accountNumber));
-        if (!account) {
-            continue;
-        }
+//         Account* account = findAccount(std::stoi(accountNumber));
+//         if (!account) {
+//             continue;
+//         }
         
-        std::unique_ptr<ITransaction> transaction;
-        int typeInt = std::stoi(type);
+//         std::unique_ptr<ITransaction> transaction;
+//         int typeInt = std::stoi(type);
         
-        if (typeInt == static_cast<int>(TransactionType::DEPOSIT)) {
-            transaction = std::make_unique<Deposit>(account, std::stod(amount));
-        }
-        else if (typeInt == static_cast<int>(TransactionType::WITHDRAWAL)) {
-            transaction = std::make_unique<Withdrawal>(account, std::stod(amount));
-        }
-        else if (typeInt == static_cast<int>(TransactionType::TRANSFER)) {
-            std::string targetAccountStr = description.substr(description.find("to account ") + 11);
-            Account* toAccount = findAccount(std::stoi(targetAccountStr));
-            if (toAccount) {
-                transaction = std::make_unique<Transfer>(account, toAccount, std::stod(amount));
-            }
-        }
+//         if (typeInt == static_cast<int>(TransactionType::DEPOSIT)) {
+//             transaction = std::make_unique<Deposit>(account, std::stod(amount));
+//         }
+//         else if (typeInt == static_cast<int>(TransactionType::WITHDRAWAL)) {
+//             transaction = std::make_unique<Withdrawal>(account, std::stod(amount));
+//         }
+//         else if (typeInt == static_cast<int>(TransactionType::TRANSFER)) {
+//             std::string targetAccountStr = description.substr(description.find("to account ") + 11);
+//             Account* toAccount = findAccount(std::stoi(targetAccountStr));
+//             if (toAccount) {
+//                 transaction = std::make_unique<Transfer>(account, toAccount, std::stod(amount));
+//             }
+//         }
         
-        if (transaction) {
-            account->addTransaction(std::move(transaction));
-        }
-    }
-}
+//         if (transaction) {
+//             account->addTransaction(std::move(transaction));
+//         }
+//     }
+// }
 
 void Database::saveAuthData() {
     std::ofstream file(getAuthFilePath());

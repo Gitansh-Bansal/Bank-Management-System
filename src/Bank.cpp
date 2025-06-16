@@ -20,20 +20,17 @@ Bank::Bank(const std::string& name)
 //     Database::incrementCustomerId();
 //     return id;
 // }
-
 // int Bank::generateAccountNumber() {
 //     int number = Database::getNextAccountNumber();
 //     Database::incrementAccountNumber();
 //     return number;
 // }
-
 // Customer* Bank::addCustomer(const std::string& name, const std::string& phone) {
 //     auto customer = std::make_unique<Customer>(generateCustomerId(), name, phone);
 //     Customer* customerPtr = customer.get();
 //     customers.push_back(std::move(customer));
 //     return customerPtr;
 // }
-
 // Customer* Bank::findCustomer(int customerId) const {
 //     auto it = std::find_if(customers.begin(), customers.end(),
 //         [customerId](const auto& customer) {
@@ -41,13 +38,11 @@ Bank::Bank(const std::string& name)
 //         });
 //     return it != customers.end() ? it->get() : nullptr;
 // }
-
 // bool Bank::removeCustomer(int customerId) {
 //     auto it = std::find_if(customers.begin(), customers.end(),
 //         [customerId](const auto& customer) {
 //             return customer->getId() == customerId;
-//         });
-    
+//         });  
 //     if (it != customers.end()) {
 //         customers.erase(it);
 //         return true;
@@ -63,9 +58,7 @@ std::unique_ptr<Account> Bank::createSavingsAccount(int customerId, double initi
     
     int accountNumber = Database::getNextAccountNumber();
     Database::incrementAccountNumber();
-    std::cout<<"Account Number fetch in Bank.cpp: "<<accountNumber<<std::endl; // correct ////////
     auto account = std::make_unique<SavingsAccount>(accountNumber, initialBalance, customer, SavingsAccount::getDefaultInterestRate(), AccountType::SAVINGS);
-    std::cout<<"Created with: "<<account->getAccountNumber()<<std::endl;
     return account;
 }
 
@@ -100,38 +93,37 @@ std::unique_ptr<Account> Bank::createAuditableSavingsAccount(int customerId, dou
 //         });
 //     return it != accounts.end() ? it->get() : nullptr;
 // }
-
 // bool Bank::closeAccount(int accountNumber) {
 //     return Database::getInstance()->removeAccount(accountNumber);
 // }
 
-bool Bank::processDeposit(int accountNumber, double amount) {
-    Account* account = Database::getInstance()->findAccount(accountNumber);
-    if (!account) {
-        return false;
-    }
-    return account->deposit(amount);
-}
+// bool Bank::processDeposit(int accountNumber, double amount) {
+//     Account* account = Database::getInstance()->findAccount(accountNumber);
+//     if (!account) {
+//         return false;
+//     }
+//     return account->deposit(amount);
+// }
 
-bool Bank::processWithdrawal(int accountNumber, double amount) {
-    Account* account = Database::getInstance()->findAccount(accountNumber);
-    if (!account) {
-        return false;
-    }
-    return account->withdraw(amount);
-}
+// bool Bank::processWithdrawal(int accountNumber, double amount) {
+//     Account* account = Database::getInstance()->findAccount(accountNumber);
+//     if (!account) {
+//         return false;
+//     }
+//     return account->withdraw(amount);
+// }
 
-bool Bank::processTransfer(int fromAccount, int toAccount, double amount) {
-    Account* from = Database::getInstance()->findAccount(fromAccount);
-    Account* to = Database::getInstance()->findAccount(toAccount);
+// bool Bank::processTransfer(int fromAccount, int toAccount, double amount) {
+//     Account* from = Database::getInstance()->findAccount(fromAccount);
+//     Account* to = Database::getInstance()->findAccount(toAccount);
     
-    if (!from || !to) {
-        return false;
-    }
+//     if (!from || !to) {
+//         return false;
+//     }
     
-    auto transfer = std::make_unique<Transfer>(from, to, amount);
-    return transfer->execute();
-}
+//     auto transfer = std::make_unique<Transfer>(from, to, amount);
+//     return transfer->execute();
+// }
 
 // void Bank::applyMonthlyUpdates() {
 //     for (auto& account : accounts) {

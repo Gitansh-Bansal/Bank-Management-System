@@ -6,6 +6,8 @@
 #include <limits>
 #include <sstream>
 #include <string>
+#include <chrono>
+#include <fstream>
 
 // Helper function for safe double input
 static double getDoubleInput(const std::string& prompt) {
@@ -36,9 +38,6 @@ static int getIntInput(const std::string& prompt) {
         std::cout << "Invalid input! Please enter a valid number." << std::endl;
     }
 }
-
-// Forward declaration of menu function
-void menu(int accountNumber);
 
 bool verifyPasswordWithAttempts(int accountNumber) {
     const int MAX_ATTEMPTS = 3;
@@ -79,7 +78,9 @@ void transactionFun(int accountNumber) {
         std::cout << "2. Withdraw\n";
         std::cout << "3. Transfer\n";
         std::cout << "4. Check Balance\n";
-        std::cout << "5. Return to Main Menu\n";
+        std::cout << "5. Statement\n";
+        std::cout << "6. Close Account\n";
+        std::cout << "7. Return to Main Menu\n";
         std::cout << "Enter your choice: ";
         std::cin >> choice;
 
@@ -160,7 +161,7 @@ void transactionFun(int accountNumber) {
                 auto toAccount = Database::getAccount(targetAccount);
 
                 if (!fromAccount || !toAccount) {
-                    std::cout << "One or both accounts not found.\n";
+                    std::cout << "Sender or Reciever Account not found.\n";
                     break;
                 }
 
@@ -185,8 +186,16 @@ void transactionFun(int accountNumber) {
                 }
                 break;
             }
-            case 5: // Return to Main Menu
-                menu(accountNumber);
+            case 5: { // Statement
+                printAccountStatement(accountNumber);
+                break;
+            }
+            case 6: {
+                // yet yo add ////////////////////////////////////////////////////
+                std::cout << "--- Account Closure Logic ---" << std::endl;
+                break;
+            }
+            case 7: // Return to Main Menu
                 return;
             default:
                 std::cout << "Invalid choice. Please try again.\n";
@@ -194,40 +203,52 @@ void transactionFun(int accountNumber) {
     }
 }
 
+void printAccountStatement(int accountNumber) {
+    Database* db = Database::getInstance();
+    db->getTransactions(accountNumber);
+}
+
 // Deposit implementation
-Deposit::Deposit(Account* account, double amount, const std::string& description)
-    : account(account), amount(amount), description(description) {
+Deposit::Deposit(Account* account, double amount)
+    : account(account), amount(amount), type(TransactionType::DEPOSIT) {
     if (!account) {
         throw std::invalid_argument("Account cannot be null");
     }
     if (amount <= 0) {
         throw std::invalid_argument("Amount must be positive");
     }
+    // Set current timestamp
+    auto now = std::chrono::system_clock::now();
+    auto now_time_t = std::chrono::system_clock::to_time_t(now);
+    std::stringstream ss;
+    ss << std::put_time(std::localtime(&now_time_t), "%Y-%m-%d %H-%M-%S");
+    timestamp = ss.str();
 }
 
 bool Deposit::execute() {
-    return account->deposit(amount);
+    account->deposit(amount);
+    return true;
 }
 
 bool Deposit::undo() {
     return account->withdraw(amount);
 }
 
-std::string Deposit::getDescription() const {
-    std::stringstream ss;
-    ss << description << " of $" << std::fixed << std::setprecision(2) << amount;
-    return ss.str();
-}
-
 // Withdrawal implementation
-Withdrawal::Withdrawal(Account* account, double amount, const std::string& description)
-    : account(account), amount(amount), description(description) {
+Withdrawal::Withdrawal(Account* account, double amount)
+    : account(account), amount(amount), type(TransactionType::WITHDRAWAL) {
     if (!account) {
         throw std::invalid_argument("Account cannot be null");
     }
     if (amount <= 0) {
         throw std::invalid_argument("Amount must be positive");
     }
+    // Set current timestamp
+    auto now = std::chrono::system_clock::now();
+    auto now_time_t = std::chrono::system_clock::to_time_t(now);
+    std::stringstream ss;
+    ss << std::put_time(std::localtime(&now_time_t), "%Y-%m-%d %H-%M-%S");
+    timestamp = ss.str();
 }
 
 bool Withdrawal::execute() {
@@ -235,18 +256,13 @@ bool Withdrawal::execute() {
 }
 
 bool Withdrawal::undo() {
-    return account->deposit(amount);
-}
-
-std::string Withdrawal::getDescription() const {
-    std::stringstream ss;
-    ss << description << " of $" << std::fixed << std::setprecision(2) << amount;
-    return ss.str();
+    account->deposit(amount);
+    return true;
 }
 
 // Transfer implementation
-Transfer::Transfer(Account* from, Account* to, double amount, const std::string& description)
-    : fromAccount(from), toAccount(to), amount(amount), description(description) {
+Transfer::Transfer(Account* from, Account* to, double amount)
+    : fromAccount(from), toAccount(to), amount(amount), type(TransactionType::TRANSFER) {
     if (!from || !to) {
         throw std::invalid_argument("Accounts cannot be null");
     }
@@ -256,34 +272,26 @@ Transfer::Transfer(Account* from, Account* to, double amount, const std::string&
     if (from == to) {
         throw std::invalid_argument("Cannot transfer to the same account");
     }
+    // Set current timestamp
+    auto now = std::chrono::system_clock::now();
+    auto now_time_t = std::chrono::system_clock::to_time_t(now);
+    std::stringstream ss;
+    ss << std::put_time(std::localtime(&now_time_t), "%Y-%m-%d %H-%M-%S");
+    timestamp = ss.str();
 }
 
 bool Transfer::execute() {
     if (fromAccount->withdraw(amount)) {
-        if (toAccount->deposit(amount)) {
-            return true;
-        }
-        // If deposit fails, undo the withdrawal
-        fromAccount->deposit(amount);
+        toAccount->deposit(amount);
+        return true;
     }
     return false;
 }
 
 bool Transfer::undo() {
     if (toAccount->withdraw(amount)) {
-        if (fromAccount->deposit(amount)) {
-            return true;
-        }
-        // If deposit fails, undo the withdrawal
-        toAccount->deposit(amount);
+        fromAccount->deposit(amount);
+        return true;
     }
     return false;
-}
-
-std::string Transfer::getDescription() const {
-    std::stringstream ss;
-    ss << description << " of $" << std::fixed << std::setprecision(2) << amount 
-       << " from account " << fromAccount->getAccountNumber() 
-       << " to account " << toAccount->getAccountNumber();
-    return ss.str();
 } 

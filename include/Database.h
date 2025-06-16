@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <mutex>
 #include <map>
+#include <iostream>
 
 class Database {
 private:
@@ -40,6 +41,7 @@ private:
     void saveCustomer(const Customer* customer);
     void saveAccount(const Account* account);
     void saveTransaction(const Account* account, const ITransaction* transaction);
+    void saveTransferTransaction(const ITransaction* transaction);
     void loadCustomers();
     void loadAccounts();
     void loadTransactions();
@@ -63,7 +65,7 @@ public:
     
     // Transaction operations
     bool addTransaction(int accountNumber, std::unique_ptr<ITransaction> transaction);
-    std::vector<std::unique_ptr<ITransaction>> getTransactions(int accountNumber) const;
+    void getTransactions(int accountNumber, std::ostream& out = std::cout) const;
     
     // Authentication
     bool authenticate(const std::string& username, const std::string& password, int& customerId) const;

@@ -18,7 +18,7 @@ protected:
     int accountNumber;
     double balance;
     Customer* owner;
-    std::vector<std::unique_ptr<ITransaction>> transactionHistory;
+    // std::vector<std::unique_ptr<ITransaction>> transactionHistory;
     AccountType type;
 
 public:
@@ -39,7 +39,7 @@ public:
     
     // Transaction history methods
     void addTransaction(std::unique_ptr<ITransaction> transaction);
-    const std::vector<std::unique_ptr<ITransaction>>& getTransactionHistory() const;
+    // const std::vector<std::unique_ptr<ITransaction>>& getTransactionHistory() const;
 
 protected:
     void updateBalance(double newBalance);

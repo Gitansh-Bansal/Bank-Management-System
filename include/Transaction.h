@@ -6,22 +6,24 @@
 #include <iomanip>
 #include <sstream>
 #include "ITransaction.h"
+#include "Account.h"  // Include full Account definition
 
-class Account;  // Forward declaration
+// Function declaration
+void transactionFun(int accountNumber);
+void printAccountStatement(int accountNumber);
 
 class Deposit : public ITransaction {
 private:
     Account* account;
     double amount;
-    std::string description;
     std::string timestamp;
     TransactionType type;
 
 public:
-    Deposit(Account* account, double amount, const std::string& description = "Deposit");
+    Deposit(Account* account, double amount);
     bool execute() override;
     bool undo() override;
-    std::string getDescription() const override;
+    std::string getDescription() const override { return "Deposit"; }
     double getAmount() const override { return amount; }
     std::string getTimestamp() const override { return timestamp; }
     TransactionType getType() const override { return TransactionType::DEPOSIT; }
@@ -31,15 +33,14 @@ class Withdrawal : public ITransaction {
 private:
     Account* account;
     double amount;
-    std::string description;
     std::string timestamp;
     TransactionType type;
 
 public:
-    Withdrawal(Account* account, double amount, const std::string& description = "Withdrawal");
+    Withdrawal(Account* account, double amount);
     bool execute() override;
     bool undo() override;
-    std::string getDescription() const override;
+    std::string getDescription() const override { return "Withdrawal"; }
     double getAmount() const override { return amount; }
     std::string getTimestamp() const override { return timestamp; }
     TransactionType getType() const override { return TransactionType::WITHDRAWAL; }
@@ -50,16 +51,17 @@ private:
     Account* fromAccount;
     Account* toAccount;
     double amount;
-    std::string description;
     std::string timestamp;
     TransactionType type;
 
 public:
-    Transfer(Account* from, Account* to, double amount, const std::string& description = "Transfer");
+    Transfer(Account* from, Account* to, double amount);
     bool execute() override;
     bool undo() override;
-    std::string getDescription() const override;
+    std::string getDescription() const override { return "Transfer"; }
     double getAmount() const override { return amount; }
     std::string getTimestamp() const override { return timestamp; }
     TransactionType getType() const override { return TransactionType::TRANSFER; }
+    int getFromAccount() const { return fromAccount->getAccountNumber(); }
+    int getToAccount() const { return toAccount->getAccountNumber(); }
 }; 

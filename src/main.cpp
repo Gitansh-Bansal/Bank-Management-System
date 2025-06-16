@@ -4,9 +4,9 @@
 
 int main() {
     try {
-        BankApp* app = BankApp::getInstance("Apna UniBank");
+        BankApp* app = BankApp::getInstance("Sampatti Bank");
         app->run();
-        delete BankApp::getInstance("Apna UniBank");
+        delete BankApp::getInstance("Sampatti Bank");
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
         return 1;

@@ -17,14 +17,3 @@ void Account::updateBalance(double newBalance) {
     }
     balance = newBalance;
 }
-
-// void Account::addTransaction(std::unique_ptr<ITransaction> transaction) {
-//     if (!transaction) {
-//         throw std::invalid_argument("Transaction cannot be null");
-//     }
-//     transactionHistory.push_back(std::move(transaction));
-// }
-
-// const std::vector<std::unique_ptr<ITransaction>>& Account::getTransactionHistory() const {
-//     return transactionHistory;
-// }

@@ -32,7 +32,7 @@ private:
     // Customer operations
     void handleCustomerLogin();
     void handleCustomerRegistration();
-    void handleCustomerLogout();
+    // void handleCustomerLogout();
     
     // Account operations
     void handleAccountCreation();
@@ -42,7 +42,7 @@ private:
     // void handleWithdrawal();
     // void handleTransfer();
     // void handleAccountStatement();
-    void handleAccountClosure();
+    // void handleAccountClosure();
 
 public:
     static BankApp* getInstance(const std::string& bankName = "MyBank");

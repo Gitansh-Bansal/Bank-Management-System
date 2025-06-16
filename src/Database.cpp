@@ -353,9 +353,11 @@ void Database::getTransactions(int accountNumber, std::ostream& out) const {
                     if (amountValue > 0) {
                         transactionType = "Transfer In";
                         runningBalance += amountValue;
+                        relatedAcc = "From " + relatedAcc;
                     } else {
                         transactionType = "Transfer Out";
                         runningBalance += amountValue; // amount is already negative
+                        relatedAcc = "To " + relatedAcc;
                     }
                     break;
                 default:
@@ -564,7 +566,6 @@ void Database::saveTransferTransaction(const ITransaction* transaction) {
 void Database::loadCustomers() {
     std::ifstream file(getCustomerFilePath());
     if (!file.is_open()) {
-        std::cout<<"customer file not found!"<<std::endl;
         return;
     }
 

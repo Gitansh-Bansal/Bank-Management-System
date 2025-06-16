@@ -73,14 +73,21 @@ void transactionFun(int accountNumber) {
     int targetAccount;
 
     while (true) {
-        std::cout << "\nTransaction Menu:\n";
-        std::cout << "1. Deposit\n";
-        std::cout << "2. Withdraw\n";
-        std::cout << "3. Transfer\n";
-        std::cout << "4. Check Balance\n";
-        std::cout << "5. Statement\n";
-        std::cout << "6. Close Account\n";
-        std::cout << "7. Return to Main Menu\n";
+        std::cout << "\n┌─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┐" << std::endl;
+        std::cout << "│                             │" << std::endl;
+        std::cout << "│        Transaction Menu     │" << std::endl;
+        std::cout << "│                             │" << std::endl;
+        std::cout << "├─────────────────────────────┤" << std::endl;
+        std::cout << "│                             │" << std::endl;
+        std::cout << "│  1. Deposit                 │" << std::endl;
+        std::cout << "│  2. Withdraw                │" << std::endl;
+        std::cout << "│  3. Transfer                │" << std::endl;
+        std::cout << "│  4. Check Balance           │" << std::endl;
+        std::cout << "│  5. Statement               │" << std::endl;
+        std::cout << "│  6. Close Account           │" << std::endl;
+        std::cout << "│  7. Return to Main Menu     │" << std::endl;
+        std::cout << "│                             │" << std::endl;
+        std::cout << "└─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┘" << std::endl << std::endl;
         std::cout << "Enter your choice: ";
         choice = getIntInput("");
 
@@ -102,7 +109,13 @@ void transactionFun(int accountNumber) {
                 auto deposit = std::make_unique<Deposit>(account, amount);
                 if (deposit->execute()) {
                     if (db->addTransaction(accountNumber, std::move(deposit))) {
-                        std::cout << "Deposit successful.\n";
+                        std::cout << "\n┌─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┐" << std::endl;
+                        std::cout << "│         Transaction Result        │" << std::endl;
+                        std::cout << "├───────────────────────────────────┤" << std::endl;
+                        std::cout << "│ Deposit Successful!               │" << std::endl;
+                        std::cout << "│ Amount Deposited: $" << std::fixed << std::setprecision(2) << std::setw(12) << amount << "   │" << std::endl;
+                        std::cout << "│ Updated Balance:  $" << std::fixed << std::setprecision(2) << std::setw(12) << account->getBalance() << "   │" << std::endl;
+                        std::cout << "└─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┘" << std::endl;
                     } else {
                         std::cout << "Failed to record deposit transaction.\n";
                     }
@@ -128,7 +141,13 @@ void transactionFun(int accountNumber) {
                 auto withdrawal = std::make_unique<Withdrawal>(account, amount);
                 if (withdrawal->execute()) {
                     if (db->addTransaction(accountNumber, std::move(withdrawal))) {
-                        std::cout << "Withdrawal successful.\n";
+                        std::cout << "\n┌─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┐" << std::endl;
+                        std::cout << "│         Transaction Result        │" << std::endl;
+                        std::cout << "├───────────────────────────────────┤" << std::endl;
+                        std::cout << "│ Withdrawal Successful!            │" << std::endl;
+                        std::cout << "│ Amount Withdrawn: $" << std::fixed << std::setprecision(2) << std::setw(12) << amount << "   │" << std::endl;
+                        std::cout << "│ Updated Balance:  $" << std::fixed << std::setprecision(2) << std::setw(12) << account->getBalance() << "   │" << std::endl;
+                        std::cout << "└─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┘" << std::endl;
                     } else {
                         std::cout << "Failed to record withdrawal transaction.\n";
                     }
@@ -139,6 +158,13 @@ void transactionFun(int accountNumber) {
             }
             case 3: { // Transfer
                 targetAccount = getIntInput("Enter target account number: ");
+                
+                // Check if target account is same as source account
+                if (targetAccount == accountNumber) {
+                    std::cout << "Cannot transfer to the same account.\n";
+                    break;
+                }
+                
                 amount = getDoubleInput("Enter amount to transfer: $");
 
                 if (amount <= 0) {
@@ -157,7 +183,14 @@ void transactionFun(int accountNumber) {
                 auto transfer = std::make_unique<Transfer>(fromAccount, toAccount, amount);
                 if (transfer->execute()) {
                     if (db->addTransaction(accountNumber, std::move(transfer))) {
-                        std::cout << "Transfer successful.\n";
+                        std::cout << "\n┌─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┐" << std::endl;
+                        std::cout << "│         Transaction Result        │" << std::endl;
+                        std::cout << "├───────────────────────────────────┤" << std::endl;
+                        std::cout << "│ Transfer Successful!              │" << std::endl;
+                        std::cout << "│ Receiving Account: " << std::setw(15) << targetAccount << "│" << std::endl;
+                        std::cout << "│ Amount Transferred: $" << std::fixed << std::setprecision(2) << std::setw(12) << amount << " │" << std::endl;
+                        std::cout << "│ Updated Balance:    $" << std::fixed << std::setprecision(2) << std::setw(12) << fromAccount->getBalance() << " │" << std::endl;
+                        std::cout << "└─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┘" << std::endl;
                     } else {
                         std::cout << "Failed to record transfer transaction.\n";
                     }
@@ -169,7 +202,12 @@ void transactionFun(int accountNumber) {
             case 4: { // Check Balance
                 auto account = Database::getAccount(accountNumber);
                 if (account) {
-                    std::cout << "Current balance: $" << account->getBalance() << "\n";
+                    std::cout << "\n┌─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┐" << std::endl;
+                    std::cout << "│          Account Balance          │" << std::endl;
+                    std::cout << "├───────────────────────────────────┤" << std::endl;
+                    std::cout << "│ Account Number: " << std::setw(12) << account->getAccountNumber() << "      │" << std::endl;
+                    std::cout << "│ Current Balance: $" << std::fixed << std::setprecision(2) << std::setw(12) << account->getBalance() << "    │" << std::endl;
+                    std::cout << "└─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┘" << std::endl;
                 } else {
                     std::cout << "Account not found.\n";
                 }
@@ -180,16 +218,19 @@ void transactionFun(int accountNumber) {
                 break;
             }
             case 6: {
-                if (closeAccount(accountNumber)) {
-                    return; // Exit the transaction menu since account is closed
-                }
-                break;
+                closeAccount(accountNumber);
+                std::cout << "\nPress Enter to continue...";
+                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                std::cin.get();
+                return;
             }
             case 7: // Return to Main Menu
                 return;
             default:
                 std::cout << "Invalid choice. Please try again.\n";
         }
+        std::cout << "\nPress Enter to continue...";
+        std::cin.get();
     }
 }
 
@@ -198,19 +239,13 @@ void printAccountStatement(int accountNumber) {
     db->getTransactions(accountNumber);
 }
 
-bool closeAccount(int accountNumber) {
+void closeAccount(int accountNumber) {
+    Database* db = Database::getInstance();
     auto account = Database::getAccount(accountNumber);
+    
     if (!account) {
         std::cout << "Account not found.\n";
-        return false;
-    }
-
-    // Check if account has zero balance
-    if (account->getBalance() != 0) {
-        std::cout << "Cannot close account with non-zero balance.\n";
-        std::cout << "Current balance: $" << account->getBalance() << "\n";
-        std::cout << "Please withdraw all funds before closing the account.\n";
-        return false;
+        return;
     }
 
     // Confirm account closure
@@ -220,19 +255,35 @@ bool closeAccount(int accountNumber) {
 
     if (confirmation != "yes" && confirmation != "YES" && confirmation != "Yes") {
         std::cout << "Account closure cancelled.\n";
-        return false;
+        return;
     }
 
-    // Get database instance
-    Database* db = Database::getInstance();
-    
-    // Remove the account
+    double remainingBalance = account->getBalance();
+    if (remainingBalance > 0) {
+        // Create and execute withdrawal for remaining balance
+        auto withdrawal = std::make_unique<Withdrawal>(account, remainingBalance);
+        if (withdrawal->execute()) {
+            if (db->addTransaction(accountNumber, std::move(withdrawal))) {
+                std::cout << "Remaining balance of $" << remainingBalance << " has been withdrawn.\n";
+            } else {
+                std::cout << "Failed to record withdrawal transaction.\n";
+                return;
+            }
+        } else {
+            std::cout << "Failed to withdraw remaining balance.\n";
+            return;
+        }
+    }
+
+    // Print final statement
+    std::cout << "\nFinal Account Statement:\n";
+    printAccountStatement(accountNumber);
+
+    // Close the account
     if (db->removeAccount(accountNumber)) {
-        std::cout << "Account successfully closed.\n";
-        return true;
+        std::cout << "Account closed successfully.\n";
     } else {
-        std::cout << "Failed to close account. Please try again later.\n";
-        return false;
+        std::cout << "Failed to close account.\n";
     }
 }
 

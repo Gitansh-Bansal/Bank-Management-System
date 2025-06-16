@@ -36,6 +36,18 @@ public:
     double getBalance() const { return balance; }
     Customer* getOwner() const { return owner; }
     AccountType getType() const { return type; }
+    std::string getTypeString() const {
+        switch (type) {
+            case AccountType::SAVINGS:
+                return "Savings";
+            case AccountType::CURRENT:
+                return "Current";
+            case AccountType::AUDITABLE_SAVINGS:
+                return "Auditable Savings";
+            default:
+                return "Unknown";
+        }
+    }
     
     // Transaction history methods
     void addTransaction(std::unique_ptr<ITransaction> transaction);

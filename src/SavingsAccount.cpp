@@ -40,3 +40,4 @@ void SavingsAccount::applyMonthlyUpdate() {
 double SavingsAccount::calculateInterest() const {
     return getBalance() * (interestRate / 12.0); // Monthly interest
 } 
+

@@ -51,7 +51,7 @@ void BankApp::run() {
 void BankApp::displayMainMenu() {
     std::cout << "\n┌─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┐" << std::endl;
     std::cout << "│                             │" << std::endl;
-    std::cout << "│        Welcome to " << std::left << std::setw(10) << bankName << "│" << std::endl;
+    std::cout << "│   Welcome to " << std::left << std::setw(12) << bankName << "   │" << std::endl;
     std::cout << "│                             │" << std::endl;
     std::cout << "├─────────────────────────────┤" << std::endl;
     std::cout << "│                             │" << std::endl;
@@ -59,7 +59,8 @@ void BankApp::displayMainMenu() {
     std::cout << "│  2. Register                │" << std::endl;
     std::cout << "│  3. Exit                    │" << std::endl;
     std::cout << "│                             │" << std::endl;
-    std::cout << "└─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┘" << std::endl << std::endl;
+    std::cout << "└─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┘\n" << std::endl;
+    std::cout << "Enter Your Choice: ";
 }
 
 void BankApp::handleCustomerLogin() {
@@ -199,7 +200,7 @@ void BankApp::handleCustomerRegistration() {
 }
 
 void BankApp::displayCustomerMenu() {
-    while (true) {
+    while (currentCustomer) {
         std::cout << "\n┌─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┐" << std::endl;
         std::cout << "│                             │" << std::endl;
         std::cout << "│        Customer Menu        │" << std::endl;
@@ -212,7 +213,7 @@ void BankApp::displayCustomerMenu() {
         std::cout << "│  4. Logout                  │" << std::endl;
         std::cout << "│                             │" << std::endl;
         std::cout << "└─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┘" << std::endl << std::endl;
-
+        std::cout << "Enter your choice: ";
         int choice;
         std::cin >> choice;
         std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
@@ -220,27 +221,40 @@ void BankApp::displayCustomerMenu() {
         switch (choice) {
             case 1:
                 handleAccountCreation();
+                std::cout << "\nPress Enter to continue...";
+                std::cin.get();
                 break;
             case 2:
                 handleAccountSelection();
                 break;
             case 3:
                 listAccounts();
+                std::cout << "\nPress Enter to continue...";
+                std::cin.get();
                 break;
             case 4:
                 currentCustomer = nullptr;
                 return;
             default:
                 std::cout << "Invalid choice!" << std::endl;
+                std::cout << "\nPress Enter to continue...";
+                std::cin.get();
         }
     }
 }
 
 void BankApp::handleAccountCreation() {
-    std::cout << "\nSelect account type:" << std::endl;
-    std::cout << "1: Savings Account" << std::endl;
-    std::cout << "2: Current Account" << std::endl;
-    std::cout << "3: Auditable Savings Account" << std::endl;
+    std::cout << "\n┌─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┐" << std::endl;
+    std::cout << "│                             │" << std::endl;
+    std::cout << "│      Select Account Type    │" << std::endl;
+    std::cout << "│                             │" << std::endl;
+    std::cout << "├─────────────────────────────┤" << std::endl;
+    std::cout << "│                             │" << std::endl;
+    std::cout << "│  1. Savings Account         │" << std::endl;
+    std::cout << "│  2. Current Account         │" << std::endl;
+    std::cout << "│  3. Auditable Savings       │" << std::endl;
+    std::cout << "│                             │" << std::endl;
+    std::cout << "└─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┘" << std::endl << std::endl;
     std::cout << "Enter your choice: ";
 
     int choice;
@@ -275,7 +289,7 @@ void BankApp::handleAccountCreation() {
 
         if (account) {
             int accnum = account->getAccountNumber();
-            std::cout << "Account created successfully! Account number: " << accnum << std::endl;
+
             auto deposit = std::make_unique<Deposit>(account.get(), initialBalance);
             Database::getInstance()->addAccount(std::move(account), password);
             if (deposit->execute()) {
@@ -287,6 +301,16 @@ void BankApp::handleAccountCreation() {
             } else {
                 std::cout << "Initial deposit failed." << std::endl;
             }   
+
+            std::cout << "\n┌─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┐" << std::endl;
+            std::cout << "│         Account Creation          │" << std::endl;
+            std::cout << "├───────────────────────────────────┤" << std::endl;
+            std::cout << "│ Account Created successfully!     │" << std::endl;
+            std::cout << "│ Account number: " << std::setw(12) << accnum << "      │" << std::endl;
+            std::cout << "│ Account Type: " << std::setw(18) << Database::getInstance()->getAccount(accnum)->getTypeString() << "  │" << std::endl;
+            std::cout << "│ Initial Balance: $" << std::fixed << std::setprecision(2) << std::setw(12) 
+                      << Database::getInstance()->getAccount(accnum)->getBalance() << "    │" << std::endl;
+            std::cout << "└─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┘" << std::endl;
         }
     } catch (const std::exception& e) {
         std::cout << "Account creation failed: " << e.what() << std::endl;
@@ -328,31 +352,24 @@ void BankApp::listAccounts() {
     const auto& accounts = currentCustomer->getAccounts();
     
     if (accounts.empty()) {
-        std::cout << "You don't have any accounts yet." << std::endl;
+        std::cout << "\n┌─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┐" << std::endl;
+        std::cout << "│         Account Information       │" << std::endl;
+        std::cout << "├───────────────────────────────────┤" << std::endl;
+        std::cout << "│ No accounts found.                │" << std::endl;
+        std::cout << "└─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┘" << std::endl;
         return;
     }
 
-    std::cout << "\nYour Accounts:" << std::endl;
+    std::cout << "\n┌─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┐" << std::endl;
+    std::cout << "│         Account Information       │" << std::endl;
+    std::cout << "├───────────────────────────────────┤" << std::endl;
     for (const auto& account : accounts) {
-        if (account->getOwner() == currentCustomer) {
-            std::string accountType;
-            switch (account->getType()) {
-                case AccountType::SAVINGS:
-                    accountType = "Savings";
-                    break;
-                case AccountType::CURRENT:
-                    accountType = "Current";
-                    break;
-                case AccountType::AUDITABLE_SAVINGS:
-                    accountType = "Auditable Savings";
-                    break;
-            }
-            std::cout << "Account Number: " << account->getAccountNumber()
-                      << ", Type: " << accountType
-                      << ", Balance: $" << std::fixed << std::setprecision(2) 
-                      << account->getBalance() << std::endl;
-        }
+        std::cout << "│ Account Number: " << std::setw(12) << account->getAccountNumber() << "      │" << std::endl;
+        std::cout << "│ Type: " << std::setw(25) << account->getTypeString() << "   │" << std::endl;
+        std::cout << "│ Balance: $" << std::fixed << std::setprecision(2) << std::setw(12) << account->getBalance() << "            │" << std::endl;
+        std::cout << "├───────────────────────────────────┤" << std::endl;
     }
+    std::cout << "└─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┘\n" << std::endl;
 }
 
 // void BankApp::displayAccountMenu() {
@@ -478,29 +495,11 @@ void BankApp::listAccounts() {
 //     std::cout << "└─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┘" << std::endl;
 // }
 
-void BankApp::handleAccountClosure() {
-    if (Database::getInstance()->removeAccount(currentAccount->getAccountNumber())) {
-        std::cout << "Account closed successfully." << std::endl;
-        currentAccount = nullptr;
-    } else {
-        std::cout << "Failed to close account." << std::endl;
-    }
-}
-
-// void BankApp::performTransaction(int accountNumber, const std::string& type) {
-//     currentAccount = Database::getAccount(accountNumber);
-//     if (!currentAccount) {
-//         std::cout << "Account not found." << std::endl;
-//         return;
-//     }
-
-//     if (type == "deposit") {
-//         handleDeposit();
-//     } else if (type == "withdrawal") {
-//         handleWithdrawal();
-//     } else if (type == "transfer") {
-//         handleTransfer();
+// void BankApp::handleAccountClosure() {
+//     if (Database::getInstance()->removeAccount(currentAccount->getAccountNumber())) {
+//         std::cout << "Account closed successfully." << std::endl;
+//         currentAccount = nullptr;
 //     } else {
-//         std::cout << "Invalid transaction type." << std::endl;
+//         std::cout << "Failed to close account." << std::endl;
 //     }
 // } 

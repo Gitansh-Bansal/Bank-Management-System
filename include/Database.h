@@ -63,6 +63,11 @@ public:
     Account* findAccount(int accountNumber) const;
     bool removeAccount(int accountNumber);
     
+    // Account creation methods
+    std::unique_ptr<Account> createSavingsAccount(int customerId, double initialBalance);
+    std::unique_ptr<Account> createCurrentAccount(int customerId, double initialBalance);
+    std::unique_ptr<Account> createAuditableSavingsAccount(int customerId, double initialBalance);
+    
     // Transaction operations
     bool addTransaction(int accountNumber, std::unique_ptr<ITransaction> transaction);
     void getTransactions(int accountNumber, std::ostream& out = std::cout) const;

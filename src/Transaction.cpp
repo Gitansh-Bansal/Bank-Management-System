@@ -82,19 +82,11 @@ void transactionFun(int accountNumber) {
         std::cout << "6. Close Account\n";
         std::cout << "7. Return to Main Menu\n";
         std::cout << "Enter your choice: ";
-        std::cin >> choice;
-
-        if (std::cin.fail()) {
-            std::cin.clear();
-            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-            std::cout << "Invalid input. Please enter a number.\n";
-            continue;
-        }
+        choice = getIntInput("");
 
         switch (choice) {
             case 1: { // Deposit
-                std::cout << "Enter amount to deposit: ";
-                std::cin >> amount;
+                amount = getDoubleInput("Enter amount to deposit: $");
                 
                 if (amount <= 0) {
                     std::cout << "Invalid amount. Please enter a positive number.\n";
@@ -120,8 +112,7 @@ void transactionFun(int accountNumber) {
                 break;
             }
             case 2: { // Withdraw
-                std::cout << "Enter amount to withdraw: ";
-                std::cin >> amount;
+                amount = getDoubleInput("Enter amount to withdraw: $");
                 
                 if (amount <= 0) {
                     std::cout << "Invalid amount. Please enter a positive number.\n";
@@ -147,10 +138,8 @@ void transactionFun(int accountNumber) {
                 break;
             }
             case 3: { // Transfer
-                std::cout << "Enter target account number: ";
-                std::cin >> targetAccount;
-                std::cout << "Enter amount to transfer: ";
-                std::cin >> amount;
+                targetAccount = getIntInput("Enter target account number: ");
+                amount = getDoubleInput("Enter amount to transfer: $");
 
                 if (amount <= 0) {
                     std::cout << "Invalid amount. Please enter a positive number.\n";
@@ -161,7 +150,7 @@ void transactionFun(int accountNumber) {
                 auto toAccount = Database::getAccount(targetAccount);
 
                 if (!fromAccount || !toAccount) {
-                    std::cout << "Sender or Reciever Account not found.\n";
+                    std::cout << "Sender or Receiver Account not found.\n";
                     break;
                 }
 

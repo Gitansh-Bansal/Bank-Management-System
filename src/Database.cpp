@@ -739,6 +739,39 @@ void Database::incrementAccountNumber() {
     db->saveCounters();
 }
 
+std::unique_ptr<Account> Database::createSavingsAccount(int customerId, double initialBalance) {
+    Customer* customer = findCustomer(customerId);
+    if (!customer) {
+        throw std::runtime_error("Customer not found");
+    }
+    
+    int accountNumber = getNextAccountNumber();
+    incrementAccountNumber();
+    return std::make_unique<SavingsAccount>(accountNumber, initialBalance, customer, SavingsAccount::getDefaultInterestRate(), AccountType::SAVINGS);
+}
+
+std::unique_ptr<Account> Database::createCurrentAccount(int customerId, double initialBalance) {
+    Customer* customer = findCustomer(customerId);
+    if (!customer) {
+        throw std::runtime_error("Customer not found");
+    }
+    
+    int accountNumber = getNextAccountNumber();
+    incrementAccountNumber();
+    return std::make_unique<CurrentAccount>(accountNumber, initialBalance, customer);
+}
+
+std::unique_ptr<Account> Database::createAuditableSavingsAccount(int customerId, double initialBalance) {
+    Customer* customer = findCustomer(customerId);
+    if (!customer) {
+        throw std::runtime_error("Customer not found");
+    }
+    
+    int accountNumber = getNextAccountNumber();
+    incrementAccountNumber();
+    return std::make_unique<AuditableSavingsAccount>(accountNumber, initialBalance, customer);
+}
+
 Database::~Database() {
     try {
         saveAll();

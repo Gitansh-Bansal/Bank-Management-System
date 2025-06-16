@@ -1,19 +1,18 @@
 #pragma once
 
-#include "Bank.h"
 #include "Customer.h"
 #include "Account.h"
 #include "Transaction.h"
+#include "Database.h"
 #include <memory>
 #include <string>
 
 class BankApp {
 private:
     static BankApp* instance;
-    std::unique_ptr<Bank> bank;
+    std::string bankName;
     Customer* currentCustomer;
     Account* currentAccount;
-    std::string bankName;
 
     // Input validation
     bool isValidName(const std::string& name);
@@ -24,7 +23,6 @@ private:
     // Private constructor for singleton
     BankApp(const std::string& bankName);
     
-
     // UI helper methods
     void displayMainMenu();
     void displayCustomerMenu();

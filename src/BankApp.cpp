@@ -4,20 +4,21 @@
 #include <iostream>
 #include <limits>
 #include <iomanip>
+#include <memory>
 
 BankApp* BankApp::instance = nullptr;
+
+BankApp::BankApp(const std::string& bankName)
+    : bankName(bankName), currentCustomer(nullptr), currentAccount(nullptr) {
+    // Initialize database
+    Database::getInstance();
+}
 
 BankApp* BankApp::getInstance(const std::string& bankName) {
     if (instance == nullptr) {
         instance = new BankApp(bankName);
     }
     return instance;
-}
-
-BankApp::BankApp(const std::string& bankName)
-    : bank(std::make_unique<Bank>(bankName)), currentCustomer(nullptr), currentAccount(nullptr) {
-    // Initialize database
-    Database::getInstance();
 }
 
 BankApp::~BankApp() {
@@ -39,9 +40,10 @@ void BankApp::run() {
                 handleCustomerRegistration();
                 break;
             case 3:
+                std::cout << "Thank you for using " << bankName << "!" << std::endl;
                 return;
             default:
-                std::cout << "Invalid choice!" << std::endl;
+                std::cout << "Invalid choice. Please try again." << std::endl;
         }
     }
 }
@@ -49,7 +51,7 @@ void BankApp::run() {
 void BankApp::displayMainMenu() {
     std::cout << "\n┌─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┐" << std::endl;
     std::cout << "│                             │" << std::endl;
-    std::cout << "│        Welcome to " << std::left << std::setw(10) << bank->getName() << "│" << std::endl;
+    std::cout << "│        Welcome to " << std::left << std::setw(10) << bankName << "│" << std::endl;
     std::cout << "│                             │" << std::endl;
     std::cout << "├─────────────────────────────┤" << std::endl;
     std::cout << "│                             │" << std::endl;
@@ -258,13 +260,13 @@ void BankApp::handleAccountCreation() {
         std::unique_ptr<Account> account;
         switch (choice) {
             case 1:
-                account = bank->createSavingsAccount(currentCustomer->getId(), 0);
+                account = Database::getInstance()->createSavingsAccount(currentCustomer->getId(), 0);
                 break;
             case 2:
-                account = bank->createCurrentAccount(currentCustomer->getId(), 0);
+                account = Database::getInstance()->createCurrentAccount(currentCustomer->getId(), 0);
                 break;
             case 3:
-                account = bank->createAuditableSavingsAccount(currentCustomer->getId(), 0);
+                account = Database::getInstance()->createAuditableSavingsAccount(currentCustomer->getId(), 0);
                 break;
             default:
                 std::cout << "Invalid account type." << std::endl;
@@ -284,16 +286,26 @@ void BankApp::handleAccountCreation() {
                 }
             } else {
                 std::cout << "Initial deposit failed." << std::endl;
-            }
-            
+            }   
         }
     } catch (const std::exception& e) {
-        std::cout << "Error creating account: " << e.what() << std::endl;
+        std::cout << "Account creation failed: " << e.what() << std::endl;
     }
 }
 
 void BankApp::handleAccountSelection() {
+    if (!currentCustomer) {
+        std::cout << "Please login first.\n";
+        return;
+    }
+
     listAccounts();
+    
+    // Check if customer has any accounts
+    if (currentCustomer->getAccounts().empty()) {
+        return;
+    }
+
     std::cout << "Enter account number: ";
     int accountNumber;
     std::cin >> accountNumber;
@@ -308,8 +320,20 @@ void BankApp::handleAccountSelection() {
 }
 
 void BankApp::listAccounts() {
+    if (!currentCustomer) {
+        std::cout << "Please login first.\n";
+        return;
+    }
+
+    const auto& accounts = currentCustomer->getAccounts();
+    
+    if (accounts.empty()) {
+        std::cout << "You don't have any accounts yet." << std::endl;
+        return;
+    }
+
     std::cout << "\nYour Accounts:" << std::endl;
-    for (const auto& account : currentCustomer->getAccounts()) {
+    for (const auto& account : accounts) {
         if (account->getOwner() == currentCustomer) {
             std::string accountType;
             switch (account->getType()) {

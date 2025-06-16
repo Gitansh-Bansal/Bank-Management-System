@@ -180,8 +180,9 @@ void transactionFun(int accountNumber) {
                 break;
             }
             case 6: {
-                // yet yo add ////////////////////////////////////////////////////
-                std::cout << "--- Account Closure Logic ---" << std::endl;
+                if (closeAccount(accountNumber)) {
+                    return; // Exit the transaction menu since account is closed
+                }
                 break;
             }
             case 7: // Return to Main Menu
@@ -195,6 +196,44 @@ void transactionFun(int accountNumber) {
 void printAccountStatement(int accountNumber) {
     Database* db = Database::getInstance();
     db->getTransactions(accountNumber);
+}
+
+bool closeAccount(int accountNumber) {
+    auto account = Database::getAccount(accountNumber);
+    if (!account) {
+        std::cout << "Account not found.\n";
+        return false;
+    }
+
+    // Check if account has zero balance
+    if (account->getBalance() != 0) {
+        std::cout << "Cannot close account with non-zero balance.\n";
+        std::cout << "Current balance: $" << account->getBalance() << "\n";
+        std::cout << "Please withdraw all funds before closing the account.\n";
+        return false;
+    }
+
+    // Confirm account closure
+    std::cout << "Are you sure you want to close this account? (yes/no): ";
+    std::string confirmation;
+    std::cin >> confirmation;
+
+    if (confirmation != "yes" && confirmation != "YES" && confirmation != "Yes") {
+        std::cout << "Account closure cancelled.\n";
+        return false;
+    }
+
+    // Get database instance
+    Database* db = Database::getInstance();
+    
+    // Remove the account
+    if (db->removeAccount(accountNumber)) {
+        std::cout << "Account successfully closed.\n";
+        return true;
+    } else {
+        std::cout << "Failed to close account. Please try again later.\n";
+        return false;
+    }
 }
 
 // Deposit implementation

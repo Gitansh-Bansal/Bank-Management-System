@@ -11,6 +11,7 @@
 // Function declaration
 void transactionFun(int accountNumber);
 void printAccountStatement(int accountNumber);
+bool closeAccount(int accountNumber);
 
 class Deposit : public ITransaction {
 private:

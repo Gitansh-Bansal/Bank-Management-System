@@ -165,9 +165,77 @@ bool Database::removeAccount(int accountNumber) {
     }
 
     try {
+        // 1. Get the account and its owner before removing
+        Account* account = it->second;
+        Customer* owner = account->getOwner();
+        
+        // 2. Remove from customer's account list
+        if (owner) {
+            owner->removeAccount(accountNumber);
+        }
+
+        // 3. Remove from database maps
         accounts.erase(it);
         accountPasswords.erase(it2);
-        saveAll();
+
+        // 4. Clean up transaction history
+        std::ifstream transFile(getTransactionFilePath());
+        std::ofstream tempFile(getTransactionFilePath() + ".tmp");
+        std::string line;
+        
+        while (std::getline(transFile, line)) {
+            std::stringstream ss(line);
+            int accNum;
+            ss >> accNum;
+            if (accNum != accountNumber) {
+                tempFile << line << std::endl;
+            }
+        }
+        
+        transFile.close();
+        tempFile.close();
+        std::filesystem::remove(getTransactionFilePath());
+        std::filesystem::rename(getTransactionFilePath() + ".tmp", getTransactionFilePath());
+
+        // 5. Clean up account file
+        // std::ifstream accFile(getAccountFilePath());
+        // std::ofstream accTempFile(getAccountFilePath() + ".tmp");
+        
+        // while (std::getline(accFile, line)) {
+        //     std::stringstream ss(line);
+        //     int accNum;
+        //     ss >> accNum;
+        //     if (accNum != accountNumber) {
+        //         accTempFile << line << std::endl;
+        //     }
+        // }
+        
+        // accFile.close();
+        // accTempFile.close();
+        // std::filesystem::remove(getAccountFilePath());
+        // std::filesystem::rename(getAccountFilePath() + ".tmp", getAccountFilePath());
+
+        // 6. Clean up auth file
+        // std::ifstream authFile(getAuthFilePath());
+        // std::ofstream authTempFile(getAuthFilePath() + ".tmp");
+        
+        // while (std::getline(authFile, line)) {
+        //     std::stringstream ss(line);
+        //     std::string username, password;
+        //     int accNum;
+        //     ss >> username >> password >> accNum;
+        //     if (accNum != accountNumber) {
+        //         authTempFile << line << std::endl;
+        //     }
+        // }
+        
+        // authFile.close();
+        // authTempFile.close();
+        // std::filesystem::remove(getAuthFilePath());
+        // std::filesystem::rename(getAuthFilePath() + ".tmp", getAuthFilePath());
+
+        // 7. Save all remaining changes
+        //saveAll();
         return true;
     } catch (const std::exception& e) {
         throw std::runtime_error("Failed to remove account: " + std::string(e.what()));
@@ -738,6 +806,7 @@ void Database::incrementAccountNumber() {
     db->nextAccountNumber++;
     db->saveCounters();
 }
+
 
 std::unique_ptr<Account> Database::createSavingsAccount(int customerId, double initialBalance) {
     Customer* customer = findCustomer(customerId);

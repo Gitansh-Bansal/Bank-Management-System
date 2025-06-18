@@ -66,21 +66,26 @@ A comprehensive C++ project demonstrating all fundamental Object-Oriented Progra
 
 ```
 Bank-Management-System/
-├── include/           # Header files (class definitions)
-├── src/              # Source files (class implementations)
-├── data/             # Data persistence (created at runtime)
-├── bin/              # Compiled executables
-├── obj/              # Object files
-├── api/              # Web API server (Node.js/Express)
-│   ├── server.js     # REST API server
-│   └── package.json  # Node.js dependencies
-├── frontend/         # React web application
-│   ├── src/          # React source code
-│   ├── public/       # Static files
-│   └── package.json  # React dependencies
-├── Makefile          # Build instructions
-├── .gitignore        # Git ignore rules
-└── README.md         # Project documentation
+├── include/                           # Header files (class definitions)
+├── src/                               # Source files (class implementations)
+├── data/                              # Data persistence (created at runtime)
+├── bin/                               # Compiled executables
+├── obj/                               # Object files
+├── api/                               # Web API server (Node.js/Express)
+│   ├── server.js                      # REST API server
+│   └── package.json                   # Node.js dependencies
+├── frontend/                          # React web application (Vite + TypeScript)
+│   ├── src/                           # React source code
+│   │   ├── pages/                     # React page components
+│   │   ├── contexts/                  # React context providers
+│   │   ├── App.tsx                    # Main application component
+│   │   └── main.tsx                   # Application entry point
+│   ├── index.html                     # HTML template
+│   ├── vite.config.ts                 # Vite configuration
+│   └── package.json                   # React dependencies
+├── Makefile                           # Build instructions
+├── .gitignore                         # Git ignore rules
+└── README.md                          # Project documentation
 ```
 
 ---

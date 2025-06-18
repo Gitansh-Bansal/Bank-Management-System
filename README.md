@@ -1,4 +1,4 @@
-# Sampatti Bank - Bank Management System
+# Apna UniBank - Bank Management System
 
 A comprehensive C++ project demonstrating all fundamental Object-Oriented Programming (OOP) principles through a fully functional bank management system. The system provides both a console interface and a modern web interface.
 

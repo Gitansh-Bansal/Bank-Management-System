@@ -1,17 +1,23 @@
 #include "../include/BankApp.h"
 #include "../include/Database.h"
 #include "../include/Transaction.h"
+#include "../include/SavingsAccount.h"
+#include "../include/CurrentAccount.h"
+#include "../include/AuditableSavingsAccount.h"
 #include <iostream>
 #include <limits>
 #include <iomanip>
 #include <memory>
+#include <sstream>
+#include <fstream>
 
 BankApp* BankApp::instance = nullptr;
 
 BankApp::BankApp(const std::string& bankName)
     : bankName(bankName), currentCustomer(nullptr), currentAccount(nullptr) {
-    // Initialize database
-    Database::getInstance();
+    // Initialize database with correct data directory path
+    // Use "../data" to point to the root data directory when running from api/bin/
+    Database::getInstance("../data");
 }
 
 BankApp* BankApp::getInstance(const std::string& bankName) {
@@ -51,7 +57,7 @@ void BankApp::run() {
 void BankApp::displayMainMenu() {
     std::cout << "\n┌─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┐" << std::endl;
     std::cout << "│                             │" << std::endl;
-    std::cout << "│   Welcome to " << std::left << std::setw(12) << bankName << "  │" << std::endl;
+    std::cout << "│   Welcome to " << std::left << std::setw(12) << bankName << "   │" << std::endl;
     std::cout << "│                             │" << std::endl;
     std::cout << "├─────────────────────────────┤" << std::endl;
     std::cout << "│                             │" << std::endl;
@@ -371,3 +377,473 @@ void BankApp::listAccounts() {
     }
     std::cout << "└─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┘\n" << std::endl;
 }
+
+// API methods for command-line integration
+bool BankApp::registerCustomer(const std::string& name, const std::string& phone, 
+                              const std::string& username, const std::string& password) {
+    try {
+        int customerId = Database::getNextCustomerId();
+        Database::incrementCustomerId();
+        auto customerPtr = std::make_unique<Customer>(customerId, name, phone);
+        return Database::getInstance()->addCustomer(std::move(customerPtr), username, password);
+    } catch (const std::exception& e) {
+        return false;
+    }
+}
+
+bool BankApp::authenticateCustomer(const std::string& username, const std::string& password, int& customerId) {
+    return Database::getInstance()->authenticate(username, password, customerId);
+}
+
+int BankApp::createAccount(const std::string& username, const std::string& password, const std::string& accountType, double initialBalance) {
+    try {
+        // Find customer by username (no password authentication needed)
+        int customerId = Database::getInstance()->getCustomerIdByUsername(username);
+        if (customerId == -1) {
+            return -1;
+        }
+        
+        Customer* customer = Database::getInstance()->findCustomer(customerId);
+        if (!customer) {
+            return -1;
+        }
+        
+        // Create account based on type with 0 initial balance
+        int accountNumber = Database::getNextAccountNumber();
+        Database::incrementAccountNumber();
+        
+        std::unique_ptr<Account> account;
+        
+        if (accountType == "savings") {
+            account = std::make_unique<SavingsAccount>(accountNumber, 0, customer);
+        } else if (accountType == "current") {
+            account = std::make_unique<CurrentAccount>(accountNumber, 0, customer);
+        } else if (accountType == "auditable") {
+            account = std::make_unique<AuditableSavingsAccount>(accountNumber, 0, customer);
+        } else {
+            return -1;
+        }
+        
+        // First add the account to the database with 0 balance
+        if (Database::getInstance()->addAccount(std::move(account), password)) {
+            // Now get the account from the database and create the deposit transaction if there's an initial balance
+            if (initialBalance > 0) {
+                Account* dbAccount = Database::getInstance()->getAccount(accountNumber);
+                if (dbAccount) {
+                    auto deposit = std::make_unique<Deposit>(dbAccount, initialBalance);
+                    if (deposit->execute()) {
+                        Database::getInstance()->addTransaction(accountNumber, std::move(deposit));
+                        Database::getInstance()->saveAll();
+                    }
+                }
+            }
+            return accountNumber;
+        }
+        return -1;
+    } catch (const std::exception& e) {
+        return -1;
+    }
+}
+
+bool BankApp::deposit(int accountNumber, double amount, const std::string& password) {
+    try {
+        Account* account = Database::getInstance()->getAccount(accountNumber);
+        if (!account) {
+            std::cerr << "Account not found" << std::endl;
+            return false;
+        }
+        
+        // Verify account password
+        if (!Database::getInstance()->verifyPassword(accountNumber, password)) {
+            std::cerr << "Incorrect password" << std::endl;
+            return false;
+        }
+        
+        if (account->deposit(amount)) {
+            // Create and save transaction record
+            auto transaction = std::make_unique<Deposit>(account, amount);
+            Database::getInstance()->addTransaction(accountNumber, std::move(transaction));
+            
+            // Save changes to database
+            Database::getInstance()->saveAll();
+            return true;
+        } else {
+            std::cerr << "Deposit operation failed" << std::endl;
+            return false;
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return false;
+    }
+}
+
+bool BankApp::withdraw(int accountNumber, double amount, const std::string& password) {
+    try {
+        Account* account = Database::getInstance()->getAccount(accountNumber);
+        if (!account) {
+            std::cerr << "Account not found" << std::endl;
+            return false;
+        }
+        
+        // Verify account password
+        if (!Database::getInstance()->verifyPassword(accountNumber, password)) {
+            std::cerr << "Incorrect password" << std::endl;
+            return false;
+        }
+        
+        if (account->withdraw(amount)) {
+            // Create and save transaction record
+            auto transaction = std::make_unique<Withdrawal>(account, amount);
+            Database::getInstance()->addTransaction(accountNumber, std::move(transaction));
+            
+            // Save changes to database
+            Database::getInstance()->saveAll();
+            return true;
+        } else {
+            std::cerr << "Insufficient funds" << std::endl;
+            return false;
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return false;
+    }
+}
+
+bool BankApp::transfer(int fromAccount, int toAccount, double amount, const std::string& password) {
+    try {
+        // Check if transferring to the same account
+        if (fromAccount == toAccount) {
+            std::cerr << "Cannot transfer to the same account" << std::endl;
+            return false;
+        }
+        
+        Account* fromAcc = Database::getInstance()->getAccount(fromAccount);
+        Account* toAcc = Database::getInstance()->getAccount(toAccount);
+        
+        if (!fromAcc || !toAcc) {
+            std::cerr << "Account not found" << std::endl;
+            return false;
+        }
+        
+        // Verify account password for the source account
+        if (!Database::getInstance()->verifyPassword(fromAccount, password)) {
+            std::cerr << "Incorrect password" << std::endl;
+            return false;
+        }
+        
+        // Perform transfer
+        if (fromAcc->withdraw(amount)) {
+            toAcc->deposit(amount);
+            
+            // Create and save transaction records for both accounts
+            auto fromTransaction = std::make_unique<Transfer>(fromAcc, toAcc, amount);
+            
+            Database::getInstance()->addTransaction(fromAccount, std::move(fromTransaction));
+            
+            // Save changes to database
+            Database::getInstance()->saveAll();
+            return true;
+        } else {
+            std::cerr << "Insufficient funds" << std::endl;
+            return false;
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return false;
+    }
+}
+
+bool BankApp::closeAccount(int accountNumber, const std::string& password) {
+    try {
+        Account* account = Database::getInstance()->getAccount(accountNumber);
+        if (!account) {
+            std::cerr << "Account not found" << std::endl;
+            return false;
+        }
+        
+        // Verify account password
+        if (!Database::getInstance()->verifyPassword(accountNumber, password)) {
+            std::cerr << "Incorrect password" << std::endl;
+            return false;
+        }
+        
+        double remainingBalance = account->getBalance();
+        if (remainingBalance > 0) {
+            // Create and execute withdrawal for remaining balance
+            auto withdrawal = std::make_unique<Withdrawal>(account, remainingBalance);
+            if (withdrawal->execute()) {
+                Database::getInstance()->addTransaction(accountNumber, std::move(withdrawal));
+            } else {
+                std::cerr << "Failed to withdraw remaining balance" << std::endl;
+                return false;
+            }
+        }
+        
+        // Close the account
+        if (Database::getInstance()->removeAccount(accountNumber)) {
+            Database::getInstance()->saveAll();
+            return true;
+        } else {
+            std::cerr << "Failed to close account" << std::endl;
+            return false;
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return false;
+    }
+}
+
+std::string BankApp::getAccounts(const std::string& username) {
+    try {
+        int customerId = Database::getInstance()->getCustomerIdByUsername(username);
+        if (customerId == -1) {
+            return "[]";
+        }
+        
+        Customer* customer = Database::getInstance()->findCustomer(customerId);
+        if (!customer) {
+            return "[]";
+        }
+        
+        std::string result = "[";
+        const auto& accounts = customer->getAccounts();
+        for (size_t i = 0; i < accounts.size(); ++i) {
+            if (i > 0) result += ",";
+            result += "{";
+            result += "\"accountNumber\":" + std::to_string(accounts[i]->getAccountNumber()) + ",";
+            result += "\"type\":\"" + accounts[i]->getTypeString() + "\",";
+            result += "\"balance\":" + std::to_string(accounts[i]->getBalance());
+            result += "}";
+        }
+        result += "]";
+        return result;
+    } catch (const std::exception& e) {
+        return "[]";
+    }
+}
+
+std::string BankApp::getAccountDetails(int accountNumber) {
+    try {
+        Account* account = Database::getInstance()->getAccount(accountNumber);
+        if (!account) {
+            return "{}";
+        }
+        
+        std::string result = "{";
+        result += "\"accountNumber\":" + std::to_string(account->getAccountNumber()) + ",";
+        result += "\"type\":\"" + account->getTypeString() + "\",";
+        result += "\"balance\":" + std::to_string(account->getBalance()) + ",";
+        result += "\"owner\":\"" + account->getOwner()->getName() + "\"";
+        result += "}";
+        return result;
+    } catch (const std::exception& e) {
+        return "{}";
+    }
+}
+
+std::string BankApp::getTransactions(int accountNumber) {
+    try {
+        Account* account = Database::getInstance()->getAccount(accountNumber);
+        if (!account) {
+            std::cerr << "Account " << accountNumber << " not found" << std::endl;
+            return "[]";
+        }
+        
+        // Read transactions from the database file
+        std::string result = "[";
+        std::string transactionFilePath = "../data/transactions.txt";
+        std::ifstream file(transactionFilePath);
+        
+        std::cerr << "Opening transaction file: " << transactionFilePath << std::endl;
+        
+        if (file.is_open()) {
+            std::string line;
+            bool firstTransaction = true;
+            int lineCount = 0;
+            double runningBalance = 0.0; // Track running balance
+            
+            while (std::getline(file, line)) {
+                lineCount++;
+                std::cerr << "Reading line " << lineCount << ": " << line << std::endl;
+                
+                std::stringstream ss(line);
+                std::string accNumStr, timestamp, typeStr, amountStr, relatedAccountStr;
+                
+                // Parse using colons as separators
+                std::getline(ss, accNumStr, ':');
+                std::getline(ss, timestamp, ':');
+                std::getline(ss, typeStr, ':');
+                std::getline(ss, amountStr, ':');
+                std::getline(ss, relatedAccountStr); // This might be empty for deposits/withdrawals
+                
+                int accNum = std::stoi(accNumStr);
+                std::cerr << "Account number from line: " << accNum << ", looking for: " << accountNumber << std::endl;
+                
+                if (accNum != accountNumber) {
+                    std::cerr << "Skipping line - account mismatch" << std::endl;
+                    continue;
+                }
+                
+                std::cerr << "Parsed: timestamp='" << timestamp << "', type='" << typeStr << "', amount='" << amountStr << "', related='" << relatedAccountStr << "'" << std::endl;
+                
+                if (!timestamp.empty() && !typeStr.empty() && !amountStr.empty()) {
+                    if (!firstTransaction) {
+                        result += ",";
+                    }
+                    
+                    double amount = std::stod(amountStr);
+                    int typeInt = std::stoi(typeStr);
+                    
+                    // Update running balance based on transaction type
+                    if (typeInt == static_cast<int>(TransactionType::DEPOSIT) || 
+                        (typeInt == static_cast<int>(TransactionType::TRANSFER))) {
+                        runningBalance += amount;
+                    } else if (typeInt == static_cast<int>(TransactionType::WITHDRAWAL)) {
+                        runningBalance -= amount; // amount is already negative for withdrawals/transfer out
+                    }
+                    
+                    std::string typeName;
+                    std::string relatedAccount = "null";
+                    
+                    switch (typeInt) {
+                        case static_cast<int>(TransactionType::DEPOSIT):
+                            typeName = "Deposit";
+                            break;
+                        case static_cast<int>(TransactionType::WITHDRAWAL):
+                            typeName = "Withdrawal";
+                            break;
+                        case static_cast<int>(TransactionType::TRANSFER):
+                            // Determine if this is a transfer in or out based on amount
+                            if (amount > 0) {
+                                typeName = "Transfer In";
+                                if (!relatedAccountStr.empty()) {
+                                    relatedAccount = "\"From " + relatedAccountStr + "\"";
+                                }
+                            } else {
+                                typeName = "Transfer Out";
+                                if (!relatedAccountStr.empty()) {
+                                    relatedAccount = "\"To " + relatedAccountStr + "\"";
+                                }
+                            }
+                            break;
+                        default:
+                            typeName = "Unknown";
+                    }
+                    
+                    result += "{";
+                    result += "\"timestamp\":\"" + timestamp + "\",";
+                    result += "\"type\":\"" + typeName + "\",";
+                    result += "\"amount\":" + std::to_string(amount) + ",";
+                    result += "\"relatedAccount\":" + relatedAccount + ",";
+                    result += "\"balance\":" + std::to_string(runningBalance);
+                    result += "}";
+                    
+                    std::cerr << "Added transaction to result with balance: " << runningBalance << std::endl;
+                    firstTransaction = false;
+                } else {
+                    std::cerr << "Skipping line - missing required fields" << std::endl;
+                }
+            }
+            
+            std::cerr << "Processed " << lineCount << " lines total" << std::endl;
+        } else {
+            std::cerr << "Failed to open transaction file" << std::endl;
+        }
+        
+        result += "]";
+        std::cerr << "Final result: " << result << std::endl;
+        return result;
+    } catch (const std::exception& e) {
+        std::cerr << "Exception in getTransactions: " << e.what() << std::endl;
+        return "[]";
+    }
+}
+
+std::string BankApp::getUserDetails(const std::string& username) {
+    try {
+        int customerId = Database::getInstance()->getCustomerIdByUsername(username);
+        if (customerId == -1) {
+            return "{}";
+        }
+        
+        Customer* customer = Database::getInstance()->findCustomer(customerId);
+        if (!customer) {
+            return "{}";
+        }
+        
+        std::string result = "{";
+        result += "\"id\":" + std::to_string(customer->getId()) + ",";
+        result += "\"name\":\"" + customer->getName() + "\",";
+        result += "\"username\":\"" + username + "\",";
+        result += "\"phone\":\"" + customer->getPhone() + "\"";
+        result += "}";
+        return result;
+    } catch (const std::exception& e) {
+        return "{}";
+    }
+}
+
+bool BankApp::updateProfile(const std::string& username, const std::string& name, const std::string& phone) {
+    try {
+        // Validate input
+        if (!isValidName(name)) {
+            std::cerr << "Invalid name format" << std::endl;
+            return false;
+        }
+        if (!isValidPhone(phone)) {
+            std::cerr << "Invalid phone number format" << std::endl;
+            return false;
+        }
+        
+        int customerId = Database::getInstance()->getCustomerIdByUsername(username);
+        if (customerId == -1) {
+            std::cerr << "User not found" << std::endl;
+            return false;
+        }
+        
+        Customer* customer = Database::getInstance()->findCustomer(customerId);
+        if (!customer) {
+            std::cerr << "Customer not found" << std::endl;
+            return false;
+        }
+        
+        // Update customer information
+        customer->setName(name);
+        customer->setPhone(phone);
+        
+        // Save changes to database
+        Database::getInstance()->saveAll();
+        return true;
+    } catch (const std::exception& e) {
+        std::cerr << "Error updating profile: " << e.what() << std::endl;
+        return false;
+    }
+}
+
+bool BankApp::changePassword(const std::string& username, const std::string& currentPassword, const std::string& newPassword) {
+    try {
+        // Validate new password
+        if (!isValidPassword(newPassword)) {
+            std::cerr << "Invalid new password format" << std::endl;
+            return false;
+        }
+        
+        // Verify current password
+        int customerId;
+        if (!Database::getInstance()->authenticate(username, currentPassword, customerId)) {
+            std::cerr << "Current password is incorrect" << std::endl;
+            return false;
+        }
+        
+        // Change password in database
+        if (Database::getInstance()->changePassword(customerId, currentPassword, newPassword)) {
+            return true;
+        } else {
+            std::cerr << "Failed to update password in database" << std::endl;
+            return false;
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Error changing password: " << e.what() << std::endl;
+        return false;
+    }
+} 

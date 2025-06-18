@@ -236,7 +236,7 @@ void transactionFun(int accountNumber) {
 
 void printAccountStatement(int accountNumber) {
     Database* db = Database::getInstance();
-    db->getTransactions(accountNumber);
+    db->getTransactions(accountNumber, std::cout);
 }
 
 void closeAccount(int accountNumber) {
@@ -259,62 +259,23 @@ void closeAccount(int accountNumber) {
     }
 
     double remainingBalance = account->getBalance();
-    if (remainingBalance > 0.0) {
-        std::string action;
-        while (true) {
-            std::cout << "Do you want to withdraw the remaining balance or transfer it to another account? (withdraw/transfer): ";
-            std::cin >> action;
-            if (action == "withdraw" || action == "Withdraw" || action == "WITHDRAW") {
-                // Withdraw remaining balance
-                auto withdrawal = std::make_unique<Withdrawal>(account, remainingBalance);
-                if (withdrawal->execute()) {
-                    if (db->addTransaction(accountNumber, std::move(withdrawal))) {
-                        std::cout << "Remaining balance of $" << remainingBalance << " has been withdrawn.\n";
-                    } else {
-                        std::cout << "Failed to record withdrawal transaction.\n";
-                        return;
-                    }
-                } else {
-                    std::cout << "Failed to withdraw remaining balance.\n";
-                    return;
-                }
-                break;
-            } else if (action == "transfer" || action == "Transfer" || action == "TRANSFER") {
-                int targetAccountNumber;
-                std::cout << "Enter the target account number to transfer the remaining balance: ";
-                std::cin >> targetAccountNumber;
-                if (targetAccountNumber == accountNumber) {
-                    std::cout << "Cannot transfer to the same account.\n";
-                    continue;
-                }
-                auto targetAccount = Database::getAccount(targetAccountNumber);
-                if (!targetAccount) {
-                    std::cout << "Target account not found.\n";
-                    continue;
-                }
-                auto transfer = std::make_unique<Transfer>(account, targetAccount, remainingBalance);
-                if (transfer->execute()) {
-                    if (db->addTransaction(accountNumber, std::move(transfer))) {
-                        std::cout << "Remaining balance of $" << remainingBalance << " has been transferred to account #" << targetAccountNumber << ".\n";
-                    } else {
-                        std::cout << "Failed to record transfer transaction.\n";
-                        return;
-                    }
-                } else {
-                    std::cout << "Failed to transfer remaining balance.\n";
-                    return;
-                }
-                break;
+    if (remainingBalance > 0) {
+        // Create and execute withdrawal for remaining balance
+        auto withdrawal = std::make_unique<Withdrawal>(account, remainingBalance);
+        if (withdrawal->execute()) {
+            if (db->addTransaction(accountNumber, std::move(withdrawal))) {
+                std::cout << "Remaining balance of $" << remainingBalance << " has been withdrawn.\n";
             } else {
-                std::cout << "Invalid option. Please enter 'withdraw' or 'transfer'.\n";
+                std::cout << "Failed to record withdrawal transaction.\n";
+                return;
             }
+        } else {
+            std::cout << "Failed to withdraw remaining balance.\n";
+            return;
         }
-    } else if (remainingBalance < 0.0) {
-        std::cout << "Warning: Account has a negative balance. Please resolve before closing.\n";
-        return;
     }
 
-    // Print final statement after withdrawal/transfer
+    // Print final statement
     std::cout << "\nFinal Account Statement:\n";
     printAccountStatement(accountNumber);
 

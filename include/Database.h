@@ -10,11 +10,12 @@
 #include <mutex>
 #include <map>
 #include <iostream>
+#include <thread>
 
 class Database {
 private:
     static Database* instance;
-    static std::mutex mutex;
+    // static std::mutex mutex;  // Temporarily commented out for compilation
     std::string dataDir;
     
     // In-memory storage
@@ -76,6 +77,7 @@ public:
     bool authenticate(const std::string& username, const std::string& password, int& customerId) const;
     bool changePassword(int customerId, const std::string& oldPassword, const std::string& newPassword);
     bool usernameExists(const std::string& username) const;
+    int getCustomerIdByUsername(const std::string& username) const;
     
     // Data persistence
     void saveAll();

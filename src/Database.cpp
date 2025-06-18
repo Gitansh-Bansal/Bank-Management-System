@@ -3,15 +3,15 @@
 #include "../include/CurrentAccount.h"
 #include "../include/AuditableSavingsAccount.h"
 #include "../include/Transaction.h"
-#include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <iostream>
 #include <iomanip>
+#include <sys/stat.h>
 
 // Initialize static members
 Database* Database::instance = nullptr;
-std::mutex Database::mutex;
+// std::mutex Database::mutex;  // Temporarily commented out for compilation
 
 Database::Database(const std::string& dataDir) : dataDir(dataDir) {
     createDataDirectory();
@@ -19,7 +19,7 @@ Database::Database(const std::string& dataDir) : dataDir(dataDir) {
 }
 
 Database* Database::getInstance(const std::string& dataDir) {
-    std::lock_guard<std::mutex> lock(mutex);
+    // std::lock_guard<std::mutex> lock(mutex);
     if (instance == nullptr) {
         instance = new Database(dataDir);
     }
@@ -28,8 +28,33 @@ Database* Database::getInstance(const std::string& dataDir) {
 
 void Database::createDataDirectory() {
     try {
-        std::filesystem::create_directories(dataDir);
-    } catch (const std::filesystem::filesystem_error& e) {
+        // Create the data directory by creating a temporary file in it
+        // This approach works on Windows and Unix-like systems
+        std::string testFile = dataDir + "/.test";
+        std::ofstream file(testFile);
+        if (file.is_open()) {
+            file.close();
+            // Remove the test file
+            std::remove(testFile.c_str());
+        } else {
+            // If we can't create a file, try to create the directory using system commands
+            #ifdef _WIN32
+                std::string command = "mkdir \"" + dataDir + "\" 2>nul";
+                system(command.c_str());
+            #else
+                std::string command = "mkdir -p \"" + dataDir + "\" 2>/dev/null";
+                system(command.c_str());
+            #endif
+            
+            // Test again
+            std::ofstream testFile2(testFile);
+            if (!testFile2.is_open()) {
+                throw std::runtime_error("Failed to create data directory: " + dataDir);
+            }
+            testFile2.close();
+            std::remove(testFile.c_str());
+        }
+    } catch (const std::exception& e) {
         throw std::runtime_error("Failed to create data directory: " + std::string(e.what()));
     }
 }
@@ -60,25 +85,16 @@ bool Database::addCustomer(std::unique_ptr<Customer> customer, const std::string
     }
     
     try {
-        // Save username and password
-        // std::ofstream authFile(getAuthFilePath(), std::ios::app);
-        // if (!authFile.is_open()) {
-        //     throw std::runtime_error("Failed to open auth file for writing");
-        // }
-        
         // If customer is nullptr, we're just adding authentication data
         if (customer) {
             int customerId = customer->getId();
             usernameToCustomerId[username] = customerId;
             usernamePasswords[username] = password;
             customers[customerId] = std::move(customer);
-            // saveCustomer(customers[customerId].get());
-            // authFile << username << ":" << password << ":" << customerId << std::endl;
-        } else {
-            // Just save the authentication data
-            // authFile << username << ":" << password << ":" << std::endl;
         }
-            return true;
+        
+        saveAll(); // Save all data after adding customer
+        return true;
     } catch (const std::exception& e) {
         if (customer) {
             customers.erase(customer->getId());
@@ -139,11 +155,22 @@ bool Database::removeCustomer(int customerId) {
 
 bool Database::addAccount(std::unique_ptr<Account> account, const std::string& password) {
     int accountNumber = account->getAccountNumber();
+    
     try {
-        accounts[accountNumber] = account.get();
+        // Store the pointer BEFORE moving the account
+        Account* accountPtr = account.get();
+        
+        accounts[accountNumber] = accountPtr;
+        
         accountPasswords[accountNumber] = password;
-        account->getOwner()->addAccount(std::move(account));
-        // saveAccount(accounts[accountNumber]);
+        
+        // Now move the account to the customer
+        Customer* owner = account->getOwner();
+        
+        owner->addAccount(std::move(account));
+        
+        saveAll(); // Save all data after adding account
+        
         return true;
     } catch (const std::exception& e) {
         accounts.erase(accountNumber);
@@ -154,7 +181,11 @@ bool Database::addAccount(std::unique_ptr<Account> account, const std::string& p
 
 Account* Database::findAccount(int accountNumber) const {
     auto it = accounts.find(accountNumber);
-    return it != accounts.end() ? it->second : nullptr;
+    if (it != accounts.end()) {
+        return it->second;
+    } else {
+        return nullptr;
+    }
 }
 
 bool Database::removeAccount(int accountNumber) {
@@ -194,8 +225,8 @@ bool Database::removeAccount(int accountNumber) {
         
         transFile.close();
         tempFile.close();
-        std::filesystem::remove(getTransactionFilePath());
-        std::filesystem::rename(getTransactionFilePath() + ".tmp", getTransactionFilePath());
+        std::remove(getTransactionFilePath().c_str());
+        std::rename((getTransactionFilePath() + ".tmp").c_str(), getTransactionFilePath().c_str());
 
         // 5. Clean up account file
         // std::ifstream accFile(getAccountFilePath());
@@ -212,8 +243,8 @@ bool Database::removeAccount(int accountNumber) {
         
         // accFile.close();
         // accTempFile.close();
-        // std::filesystem::remove(getAccountFilePath());
-        // std::filesystem::rename(getAccountFilePath() + ".tmp", getAccountFilePath());
+        // std::experimental::filesystem::remove(getAccountFilePath());
+        // std::experimental::filesystem::rename(getAccountFilePath() + ".tmp", getAccountFilePath());
 
         // 6. Clean up auth file
         // std::ifstream authFile(getAuthFilePath());
@@ -231,8 +262,8 @@ bool Database::removeAccount(int accountNumber) {
         
         // authFile.close();
         // authTempFile.close();
-        // std::filesystem::remove(getAuthFilePath());
-        // std::filesystem::rename(getAuthFilePath() + ".tmp", getAuthFilePath());
+        // std::experimental::filesystem::remove(getAuthFilePath());
+        // std::experimental::filesystem::rename(getAuthFilePath() + ".tmp", getAuthFilePath());
 
         // 7. Save all remaining changes
         //saveAll();
@@ -260,143 +291,89 @@ bool Database::addTransaction(int accountNumber, std::unique_ptr<ITransaction> t
 void Database::getTransactions(int accountNumber, std::ostream& out) const {
     std::ifstream file(getTransactionFilePath());
     if (!file.is_open()) {
-        out << "Error: Could not open transactions file." << std::endl;
+        out << "No transaction history found." << std::endl;
         return;
     }
 
-    // Box-drawing characters
-    const char* topLeft = "┌";
-    const char* topRight = "┐";
-    const char* bottomLeft = "└";
-    const char* bottomRight = "┘";
-    const char* horizontal = "─";
-    const char* vertical = "│";
-    const char* tDown = "┬";
-    const char* tUp = "┴";
-    const char* tRight = "├";
-    const char* tLeft = "┤";
-    const char* cross = "┼";
-
-    // Column widths
-    const int dateWidth = 20;
-    const int typeWidth = 15;
-    const int amountWidth = 15;
-    const int relatedWidth = 15;
-    const int balanceWidth = 15;
-
-    // Print header
-    out << "\nAccount Statement for Account #" << accountNumber << "\n";
-    
-    // Print top border
-    out << topLeft;
-    for (int i = 0; i < dateWidth; i++) out << horizontal;
-    out << tDown;
-    for (int i = 0; i < typeWidth; i++) out << horizontal;
-    out << tDown;
-    for (int i = 0; i < amountWidth; i++) out << horizontal;
-    out << tDown;
-    for (int i = 0; i < relatedWidth; i++) out << horizontal;
-    out << tDown;
-    for (int i = 0; i < balanceWidth; i++) out << horizontal;
-    out << topRight << "\n";
-
-    // Print header row
-    out << vertical << std::left << std::setw(dateWidth) << "Date & Time"
-        << vertical << std::setw(typeWidth) << "Type"
-        << vertical << std::setw(amountWidth) << "Amount"
-        << vertical << std::setw(relatedWidth) << "Related Account"
-        << vertical << std::setw(balanceWidth) << "Balance"
-        << vertical << "\n";
-
-    // Print separator
-    out << tRight;
-    for (int i = 0; i < dateWidth; i++) out << horizontal;
-    out << cross;
-    for (int i = 0; i < typeWidth; i++) out << horizontal;
-    out << cross;
-    for (int i = 0; i < amountWidth; i++) out << horizontal;
-    out << cross;
-    for (int i = 0; i < relatedWidth; i++) out << horizontal;
-    out << cross;
-    for (int i = 0; i < balanceWidth; i++) out << horizontal;
-    out << tLeft << "\n";
-
     std::string line;
-    double runningBalance = 0.0;
+    bool foundTransactions = false;
+    double runningBalance = 0.0; // Track running balance
+    
+    // Header
+    out << "\n┌─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┐" << std::endl;
+    out << "│                     Transaction History                  │" << std::endl;
+    out << "├─────────────────────────────────────────────────────────┤" << std::endl;
+    
     while (std::getline(file, line)) {
         std::stringstream ss(line);
-        std::string accNo, timestamp, type, amount, relatedAcc;
+        std::string accNumStr, timestamp, type, amountStr, relatedAccountStr;
         
-        // Parse the line
-        std::getline(ss, accNo, ':');
+        // Parse using colons as separators
+        std::getline(ss, accNumStr, ':');
         std::getline(ss, timestamp, ':');
         std::getline(ss, type, ':');
-        std::getline(ss, amount, ':');
-        std::getline(ss, relatedAcc, ':');
-
-        // Check if this transaction belongs to our account
-        if (std::stoi(accNo) == accountNumber) {
-            double amountValue = std::stod(amount);
-            std::string transactionType;
+        std::getline(ss, amountStr, ':');
+        std::getline(ss, relatedAccountStr); // This might be empty for deposits/withdrawals
+        
+        int accNum = std::stoi(accNumStr);
+        if (accNum != accountNumber) continue;
+        
+        if (!timestamp.empty() && !type.empty() && !amountStr.empty()) {
+            double amountValue = std::stod(amountStr);
+            foundTransactions = true;
             
-            // Determine transaction type and update balance
-            switch (std::stoi(type)) {
-                case 0: // Deposit
-                    transactionType = "Deposit";
-                    runningBalance += amountValue;
-                    break;
-                case 1: // Withdrawal
-                    transactionType = "Withdrawal";
-                    runningBalance -= amountValue;
-                    break;
-                case 2: // Transfer
-                    if (amountValue > 0) {
-                        transactionType = "Transfer In";
-                        runningBalance += amountValue;
-                        relatedAcc = "From " + relatedAcc;
-                    } else {
-                        transactionType = "Transfer Out";
-                        runningBalance += amountValue; // amount is already negative
-                        relatedAcc = "To " + relatedAcc;
-                    }
-                    break;
-                default:
-                    transactionType = "Unknown";
-                    break;
-            }
-
-            // Print transaction details
-            out << vertical << std::left 
-                << std::setw(dateWidth) << timestamp 
-                << vertical << std::setw(typeWidth) << transactionType 
-                << vertical << std::setw(amountWidth) << std::fixed << std::setprecision(2) << std::abs(amountValue);
-            
-            // Print related account for transfers
-            if (std::stoi(type) == 2) {
-                out << vertical << std::setw(relatedWidth) << relatedAcc;
-            } else {
-                out << vertical << std::setw(relatedWidth) << "-";
+            // Update running balance based on transaction type
+            if (type == "0" || type == "2") { // Deposit or Transfer In
+                runningBalance += amountValue;
+            } else if (type == "1") { // Withdrawal or Transfer Out
+                runningBalance -= amountValue; // amountValue is already negative for withdrawals/transfer out
             }
             
-            out << vertical << std::setw(balanceWidth) << std::fixed << std::setprecision(2) << runningBalance 
-                << vertical << "\n";
+            // Format the output
+            std::string vertical = "│ ";
+            int timestampWidth = 20;
+            int typeWidth = 20;
+            int amountWidth = 15;
+            int balanceWidth = 15;
+            
+            // Determine transaction type display
+            std::string typeDisplay = type;
+            if (type == "2") { // Transfer transaction
+                if (amountValue > 0) {
+                    typeDisplay = "Transfer In";
+                } else {
+                    typeDisplay = "Transfer Out";
+                }
+            } else if (type == "0") {
+                typeDisplay = "Deposit";
+            } else if (type == "1") {
+                typeDisplay = "Withdrawal";
+            }
+            
+            out << vertical << std::left << std::setw(timestampWidth) << timestamp
+                << vertical << std::setw(typeWidth) << typeDisplay
+                << vertical << std::setw(amountWidth) << std::fixed << std::setprecision(2) << (amountValue < 0 ? -amountValue : amountValue)
+                << vertical << std::setw(balanceWidth) << std::fixed << std::setprecision(2) << runningBalance
+                << vertical;
+            
+            // Add related account information for transfers
+            if (type == "2" && !relatedAccountStr.empty()) {
+                if (amountValue > 0) {
+                    out << " From " << relatedAccountStr;
+                } else {
+                    out << " To " << relatedAccountStr;
+                }
+            }
+            
+            out << std::endl;
         }
     }
-
-    // Print bottom border
-    out << bottomLeft;
-    for (int i = 0; i < dateWidth; i++) out << horizontal;
-    out << tUp;
-    for (int i = 0; i < typeWidth; i++) out << horizontal;
-    out << tUp;
-    for (int i = 0; i < amountWidth; i++) out << horizontal;
-    out << tUp;
-    for (int i = 0; i < relatedWidth; i++) out << horizontal;
-    out << tUp;
-    for (int i = 0; i < balanceWidth; i++) out << horizontal;
-    out << bottomRight << "\n";
-
-    file.close();
+    
+    if (!foundTransactions) {
+        out << "│ No transactions found for this account.                    │" << std::endl;
+    }
+    
+    out << "└─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┘" << std::endl;
 }
 
 bool Database::authenticate(const std::string& username, const std::string& password, int& customerId) const {
@@ -417,8 +394,31 @@ bool Database::authenticate(const std::string& username, const std::string& pass
 
 bool Database::changePassword(int customerId, const std::string& oldPassword, const std::string& newPassword) {
     try {
+        // First, find the username for this customer ID
+        std::string username;
+        for (const auto& pair : usernameToCustomerId) {
+            if (pair.second == customerId) {
+                username = pair.first;
+                break;
+            }
+        }
+        
+        if (username.empty()) {
+            std::cerr << "Username not found for customer ID: " << customerId << std::endl;
+            return false;
+        }
+        
+        // Verify the old password matches what's in memory
+        auto it = usernamePasswords.find(username);
+        if (it == usernamePasswords.end() || it->second != oldPassword) {
+            std::cerr << "Old password verification failed for username: " << username << std::endl;
+            return false;
+        }
+        
+        // Update the file
         std::ifstream file(getAuthFilePath());
         if (!file.is_open()) {
+            std::cerr << "Failed to open auth file for reading" << std::endl;
             return false;
         }
         
@@ -428,33 +428,53 @@ bool Database::changePassword(int customerId, const std::string& oldPassword, co
         
         while (std::getline(file, line)) {
             std::stringstream ss(line);
-            std::string username, storedPassword, storedId;
-            std::getline(ss, username, ':');
-            std::getline(ss, storedPassword, ':');
-            std::getline(ss, storedId);
+            std::string type, fileUsername, storedPassword, storedId;
+            std::getline(ss, type, ':');
             
-            if (std::stoi(storedId) == customerId) {
-                if (storedPassword != oldPassword) {
-                    return false;
+            if (type == "CUSTOMER") {
+                std::getline(ss, fileUsername, ':');
+                std::getline(ss, storedPassword, ':');
+                std::getline(ss, storedId);
+                
+                if (fileUsername == username) {
+                    if (storedPassword != oldPassword) {
+                        std::cerr << "Password mismatch in file for username: " << username << std::endl;
+                        return false;
+                    }
+                    lines.push_back("CUSTOMER:" + username + ":" + newPassword + ":" + storedId);
+                    found = true;
+                } else {
+                    lines.push_back(line);
                 }
-                lines.push_back(username + ":" + newPassword + ":" + storedId);
-                found = true;
             } else {
+                // Keep non-CUSTOMER lines as they are (ACCOUNT lines)
                 lines.push_back(line);
             }
         }
 
         if (!found) {
+            std::cerr << "Customer record not found in auth file for username: " << username << std::endl;
             return false;
         }
 
+        // Write the updated data back to file
         std::ofstream outFile(getAuthFilePath());
+        if (!outFile.is_open()) {
+            std::cerr << "Failed to open auth file for writing" << std::endl;
+            return false;
+        }
+        
         for (const auto& l : lines) {
             outFile << l << std::endl;
         }
         
+        // Update the in-memory data structure
+        usernamePasswords[username] = newPassword;
+        
+        std::cerr << "Password successfully changed for username: " << username << std::endl;
         return true;
-    } catch (const std::exception&) {
+    } catch (const std::exception& e) {
+        std::cerr << "Exception in changePassword: " << e.what() << std::endl;
         return false;
     }
 }
@@ -487,29 +507,39 @@ void Database::loadAll() {
 }
 
 void Database::saveCustomer(const Customer* customer) {
-    std::ofstream file(getCustomerFilePath());
-    if (!file.is_open()) {
-        throw std::runtime_error("Failed to open customer file for writing");
-    }
-    
-    for (const auto& [id, cust] : customers) {
-        if (!customer || cust.get() == customer) {
+    (void)customer; // Suppress unused parameter warning
+    try {
+        std::ofstream file(getCustomerFilePath());
+        if (!file.is_open()) {
+            throw std::runtime_error("Failed to open customer file for writing");
+        }
+        
+        for (const auto& pair : customers) {
+            int id = pair.first;
+            const Customer* cust = pair.second.get();
             file << id << ":" << cust->getName() << ":" << cust->getPhone() << std::endl;
         }
+    } catch (const std::exception& e) {
+        throw std::runtime_error("Failed to save customer data: " + std::string(e.what()));
     }
 }
 
 void Database::saveAccount(const Account* account) {
-    std::ofstream file(getAccountFilePath());
-    if (!file.is_open()) {
-        throw std::runtime_error("Failed to open account file for writing");
-    }
-    
-    for (const auto& [number, acc] : accounts) {
-        if (!account || acc == account) {
-            file << number << ":" << acc->getBalance() << ":" 
-                 << acc->getOwner()->getId() << ":" << static_cast<int>(acc->getType()) << std::endl;
+    (void)account; // Suppress unused parameter warning
+    try {
+        std::ofstream file(getAccountFilePath());
+        if (!file.is_open()) {
+            throw std::runtime_error("Failed to open account file for writing");
         }
+        
+        for (const auto& pair : accounts) {
+            int number = pair.first;
+            Account* acc = pair.second;
+            file << number << ":" << acc->getOwner()->getId() << ":" 
+                 << acc->getBalance() << ":" << static_cast<int>(acc->getType()) << std::endl;
+        }
+    } catch (const std::exception& e) {
+        throw std::runtime_error("Failed to save account data: " + std::string(e.what()));
     }
 }
 
@@ -585,16 +615,17 @@ void Database::loadCustomers() {
 void Database::loadAccounts() {
     std::ifstream file(getAccountFilePath());
     if (!file.is_open()) {
+        std::cerr << "Failed to open account file: " << getAccountFilePath() << std::endl;
         return;
     }
 
     std::string line;
     while (std::getline(file, line)) {
         std::stringstream ss(line);
-        std::string number, balance, ownerId, type;
-        std::getline(ss, number, ':');
-        std::getline(ss, balance, ':');
+        std::string accountNumber, ownerId, balance, type;
+        std::getline(ss, accountNumber, ':');
         std::getline(ss, ownerId, ':');
+        std::getline(ss, balance, ':');
         std::getline(ss, type);
         
         Customer* owner = findCustomer(std::stoi(ownerId));
@@ -606,7 +637,7 @@ void Database::loadAccounts() {
         switch (std::stoi(type)) {
             case static_cast<int>(AccountType::SAVINGS):
                 account = std::make_unique<SavingsAccount>(
-                    std::stoi(number),
+                    std::stoi(accountNumber),
                     std::stod(balance),
                     owner,
                     SavingsAccount::getDefaultInterestRate(),
@@ -615,14 +646,14 @@ void Database::loadAccounts() {
                 break;
             case static_cast<int>(AccountType::CURRENT):
                 account = std::make_unique<CurrentAccount>(
-                    std::stoi(number),
+                    std::stoi(accountNumber),
                     std::stod(balance),
                     owner
                 );
                 break;
             case static_cast<int>(AccountType::AUDITABLE_SAVINGS):
                 account = std::make_unique<AuditableSavingsAccount>(
-                    std::stoi(number),
+                    std::stoi(accountNumber),
                     std::stod(balance),
                     owner
                 );
@@ -631,14 +662,15 @@ void Database::loadAccounts() {
                 continue;
         }
         
-        // First add to customer's accounts
+        // Store the pointer BEFORE moving the account
+        Account* accountPtr = account.get();
+        int accNumber = accountPtr->getAccountNumber();
+        
+        // Add to customer's accounts (this moves the account)
         owner->addAccount(std::move(account));
         
-        // Then get the pointer from the customer's accounts
-        Account* accountPtr = owner->findAccount(std::stoi(number));
-        if (accountPtr) {
-            accounts[accountPtr->getAccountNumber()] = accountPtr;
-        }
+        // Add to accounts map
+        accounts[accNumber] = accountPtr;
     }
 }
 
@@ -692,12 +724,16 @@ void Database::saveAuthData() {
     }
     
     // Save customer auth data in form of customer :username : password  : customerId
-    for (const auto& [username, customerId] : usernameToCustomerId) {
+    for (const auto& pair : usernameToCustomerId) {
+        const std::string& username = pair.first;
+        int customerId = pair.second;
         file << "CUSTOMER:" << username << ":" << usernamePasswords[username] << ":" << customerId << std::endl;
     }
     
     // Save account authentication data
-    for (const auto& [accountNumber, password] : accountPasswords) {
+    for (const auto& pair : accountPasswords) {
+        int accountNumber = pair.first;
+        const std::string& password = pair.second;
         file << "ACCOUNT:" << accountNumber << ":" << password << std::endl;
     }
 }
@@ -840,6 +876,11 @@ std::unique_ptr<Account> Database::createAuditableSavingsAccount(int customerId,
     int accountNumber = getNextAccountNumber();
     incrementAccountNumber();
     return std::make_unique<AuditableSavingsAccount>(accountNumber, initialBalance, customer);
+}
+
+int Database::getCustomerIdByUsername(const std::string& username) const {
+    auto it = usernameToCustomerId.find(username);
+    return it != usernameToCustomerId.end() ? it->second : -1;
 }
 
 Database::~Database() {

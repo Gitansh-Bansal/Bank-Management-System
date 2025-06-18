@@ -112,7 +112,7 @@ void BankApp::run() {
 void BankApp::displayMainMenu() {
     std::cout << "\n┌─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┐" << std::endl;
     std::cout << "│                             │" << std::endl;
-    std::cout << "│   Welcome to " << std::left << std::setw(12) << bankName << "   │" << std::endl;
+    std::cout << "│  Welcome to " << std::left << std::setw(12) << bankName << "   │" << std::endl;
     std::cout << "│                             │" << std::endl;
     std::cout << "├─────────────────────────────┤" << std::endl;
     std::cout << "│                             │" << std::endl;

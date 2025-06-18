@@ -103,11 +103,11 @@ Bank-Management-System/
 2. **Run the console application:**
    ```sh
    make run
-   # or directly
+   # OR
    ./bin/bank
    ```
 
-**Command-line API mode:**
+**Command-line API mode (For Debugging):**
    ```sh
    # Register a customer
    ./bin/bank register "John Doe" "1234567890" "john_doe" "Password123"
@@ -126,6 +126,15 @@ Bank-Management-System/
    
    # Transfer
    ./bin/bank transfer 10001 10002 100.00 "Password123"
+
+   # View account details
+    ./bin/bank account-details 10001 "Password123"
+
+   # View transaction history
+    ./bin/bank transaction-history 10001 "Password123"
+
+   # Close account
+    ./bin/bank close-account 10001 "Password123"
    ```
 
 ### Web Application
@@ -229,6 +238,38 @@ The web application uses a REST API with the following endpoints:
 - The web API spawns the C++ executable for backend operations
 - All data is persisted in the `data/` directory
 - Build artifacts are stored in `obj/` and `bin/` directories
+
+---
+
+## Screenshots
+
+### Web Application
+
+#### Login Page
+![Login Page](assets/Screenshots/WebApplication/Login_Page.png)
+
+#### Dashboard
+![Dashboard](assets/Screenshots/WebApplication/Dashboard.png)
+
+#### Account Details
+![Account Page](assets/Screenshots/WebApplication/Account_Page.png)
+
+#### Profile Management
+![Profile Page](assets/Screenshots/WebApplication/Profile_Page.png)
+
+### Console Application
+
+#### Main Menu
+![Main Menu](assets/Screenshots/ConsoleApplication/Main_Menu.png)
+
+#### Customer Menu
+![Customer Menu](assets/Screenshots/ConsoleApplication/Customer_Menu.png)
+
+#### Transaction Menu
+![Transaction Menu](assets/Screenshots/ConsoleApplication/Transaction_Menu.png)
+
+#### Account Closure
+![Account Closure](assets/Screenshots/ConsoleApplication/Account_Closure.png)
 
 ---
 

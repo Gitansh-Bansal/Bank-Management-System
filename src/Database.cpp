@@ -300,9 +300,11 @@ void Database::getTransactions(int accountNumber, std::ostream& out) const {
     double runningBalance = 0.0; // Track running balance
     
     // Header
-    out << "\n┌─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┐" << std::endl;
-    out << "│                     Transaction History                  │" << std::endl;
-    out << "├─────────────────────────────────────────────────────────┤" << std::endl;
+    out << "\n┌─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┐" << std::endl;
+    out << "│                           Transaction History for Account #" << accountNumber << "                          │" << std::endl;
+    out << "├─────────────────────┬─────────────────┬────────────────┬────────────────┬─────────────────┤" << std::endl;
+    out << "│ Timestamp           │ Type            │ Amount         │ Balance        │ Related Account │" << std::endl;
+    out << "├─────────────────────┼─────────────────┼────────────────┼────────────────┼─────────────────┤" << std::endl;
     
     while (std::getline(file, line)) {
         std::stringstream ss(line);
@@ -332,9 +334,10 @@ void Database::getTransactions(int accountNumber, std::ostream& out) const {
             // Format the output
             std::string vertical = "│ ";
             int timestampWidth = 20;
-            int typeWidth = 20;
-            int amountWidth = 15;
-            int balanceWidth = 15;
+            int typeWidth = 16;
+            int amountWidth = 14;
+            int balanceWidth = 14;
+            int relatedWidth = 16;
             
             // Determine transaction type display
             std::string typeDisplay = type;
@@ -349,31 +352,32 @@ void Database::getTransactions(int accountNumber, std::ostream& out) const {
             } else if (type == "1") {
                 typeDisplay = "Withdrawal";
             }
-            
-            out << vertical << std::left << std::setw(timestampWidth) << timestamp
-                << vertical << std::setw(typeWidth) << typeDisplay
-                << vertical << std::setw(amountWidth) << std::fixed << std::setprecision(2) << (amountValue < 0 ? -amountValue : amountValue)
-                << vertical << std::setw(balanceWidth) << std::fixed << std::setprecision(2) << runningBalance
-                << vertical;
-            
+
             // Add related account information for transfers
             if (type == "2" && !relatedAccountStr.empty()) {
                 if (amountValue > 0) {
-                    out << " From " << relatedAccountStr;
+                    relatedAccountStr = "From " + relatedAccountStr;
                 } else {
-                    out << " To " << relatedAccountStr;
+                    relatedAccountStr = "To " + relatedAccountStr;
                 }
             }
+            else relatedAccountStr = "-";
             
+            out << vertical << std::left << std::setw(timestampWidth) << timestamp
+                << vertical << std::setw(typeWidth) << typeDisplay
+                << vertical << "$" << std::setw(amountWidth) << std::fixed << std::setprecision(2) << (amountValue < 0 ? -amountValue : amountValue)
+                << vertical << "$" << std::setw(balanceWidth) << std::fixed << std::setprecision(2) << runningBalance
+                << vertical << std::setw(relatedWidth) << relatedAccountStr
+                << vertical;
             out << std::endl;
         }
     }
     
     if (!foundTransactions) {
-        out << "│ No transactions found for this account.                    │" << std::endl;
+    out << "│                             No transactions found for this account                            │" << std::endl;
     }
-    
-    out << "└─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┘" << std::endl;
+    out << "├─────────────────────┴─────────────────┴────────────────┴────────────────┴─────────────────┤" << std::endl;
+    out << "└─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─x─┘" << std::endl;
 }
 
 bool Database::authenticate(const std::string& username, const std::string& password, int& customerId) const {

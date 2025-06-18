@@ -10,14 +10,69 @@
 #include <memory>
 #include <sstream>
 #include <fstream>
+#include <cstring>
+#ifdef _WIN32
+#include <direct.h>
+#include <windows.h>
+#define getcwd _getcwd
+#else
+#include <unistd.h>
+#endif
 
 BankApp* BankApp::instance = nullptr;
 
+// Function to set console encoding for Windows
+void setConsoleEncoding() {
+#ifdef _WIN32
+    // Set console to UTF-8
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+    
+    // Enable virtual terminal processing for ANSI escape sequences
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    DWORD dwMode = 0;
+    GetConsoleMode(hOut, &dwMode);
+    #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
+    #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
+    #endif
+    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    SetConsoleMode(hOut, dwMode);
+#endif
+}
+
 BankApp::BankApp(const std::string& bankName)
     : bankName(bankName), currentCustomer(nullptr), currentAccount(nullptr) {
-    // Initialize database with correct data directory path
-    // Use "../data" to point to the root data directory when running from api/bin/
-    Database::getInstance("../data");
+    // Set console encoding for proper Unicode display
+    setConsoleEncoding();
+    
+    // Determine the correct data directory path
+    std::string dataPath = "data";
+    
+    // Get current working directory
+    char cwd[1024];
+    if (getcwd(cwd, sizeof(cwd)) != nullptr) {
+        std::string currentDir(cwd);
+        
+        // Helper function to check if string ends with a suffix
+        auto endsWith = [](const std::string& str, const std::string& suffix) {
+            if (str.length() < suffix.length()) return false;
+            return str.compare(str.length() - suffix.length(), suffix.length(), suffix) == 0;
+        };
+        
+        // If we're running from api/ directory, go up one level to find the root data directory
+        if (currentDir.find("api") != std::string::npos && 
+            (endsWith(currentDir, "api") || endsWith(currentDir, "api\\") || endsWith(currentDir, "api/"))) {
+            dataPath = "../data";
+        }
+        // If we're running from bin/ directory, go up one level to find the root data directory
+        else if (currentDir.find("bin") != std::string::npos && 
+                 (endsWith(currentDir, "bin") || endsWith(currentDir, "bin\\") || endsWith(currentDir, "bin/"))) {
+            dataPath = "../data";
+        }
+    }
+    
+    // Initialize database with the correct data directory path
+    Database::getInstance(dataPath);
 }
 
 BankApp* BankApp::getInstance(const std::string& bankName) {

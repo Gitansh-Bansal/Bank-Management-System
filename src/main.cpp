@@ -5,10 +5,9 @@
 
 int main(int argc, char* argv[]) {
     try {
-        BankApp* app = BankApp::getInstance("Apna UniBank");
-        
         // If command-line arguments are provided, handle API mode
         if (argc > 1) {
+            BankApp* app = BankApp::getInstance("Apna UniBank");
             std::string command = argv[1];
             
             if (command == "register" && argc == 6) {
@@ -191,12 +190,14 @@ int main(int argc, char* argv[]) {
                 std::cerr << "  close-account <account> <password>" << std::endl;
                 return 1;
             }
+            delete BankApp::getInstance("Apna UniBank");
         } else {
             // Interactive mode - original behavior
+            BankApp* app = BankApp::getInstance("Apna UniBank");
             app->run();
+            delete BankApp::getInstance("Apna UniBank");
         }
         
-        delete BankApp::getInstance("Apna UniBank");
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
         return 1;

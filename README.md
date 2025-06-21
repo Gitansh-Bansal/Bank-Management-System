@@ -34,6 +34,38 @@ A comprehensive C++ project demonstrating all fundamental Object-Oriented Progra
 
 ---
 
+## Screenshots
+
+### Web Application
+
+#### Login Page
+![Login Page](assets/Screenshots/WebApplication/Login_Page.png)
+
+#### Dashboard
+![Dashboard](assets/Screenshots/WebApplication/Dashboard.png)
+
+#### Account Details
+![Account Page](assets/Screenshots/WebApplication/Account_Page.png)
+
+#### Profile Management
+![Profile Page](assets/Screenshots/WebApplication/Profile_Page.png)
+
+### Console Application
+
+#### Main Menu
+![Main Menu](assets/Screenshots/ConsoleApplication/Main_Menu.png)
+
+#### Customer Menu
+![Customer Menu](assets/Screenshots/ConsoleApplication/Customer_Menu.png)
+
+#### Transaction Menu
+![Transaction Menu](assets/Screenshots/ConsoleApplication/Transaction_Menu.png)
+
+#### Account Closure
+![Account Closure](assets/Screenshots/ConsoleApplication/Account_Closure.png)
+
+---
+
 ## OOP Principles Demonstrated
 
 - **Encapsulation:**  
@@ -238,38 +270,6 @@ The web application uses a REST API with the following endpoints:
 - The web API spawns the C++ executable for backend operations
 - All data is persisted in the `data/` directory
 - Build artifacts are stored in `obj/` and `bin/` directories
-
----
-
-## Screenshots
-
-### Web Application
-
-#### Login Page
-![Login Page](assets/Screenshots/WebApplication/Login_Page.png)
-
-#### Dashboard
-![Dashboard](assets/Screenshots/WebApplication/Dashboard.png)
-
-#### Account Details
-![Account Page](assets/Screenshots/WebApplication/Account_Page.png)
-
-#### Profile Management
-![Profile Page](assets/Screenshots/WebApplication/Profile_Page.png)
-
-### Console Application
-
-#### Main Menu
-![Main Menu](assets/Screenshots/ConsoleApplication/Main_Menu.png)
-
-#### Customer Menu
-![Customer Menu](assets/Screenshots/ConsoleApplication/Customer_Menu.png)
-
-#### Transaction Menu
-![Transaction Menu](assets/Screenshots/ConsoleApplication/Transaction_Menu.png)
-
-#### Account Closure
-![Account Closure](assets/Screenshots/ConsoleApplication/Account_Closure.png)
 
 ---
 

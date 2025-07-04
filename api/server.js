@@ -5,6 +5,7 @@ const { spawn } = require('child_process');
 const path = require('path');
 
 const app = express();
+// Use the port provided by the environment (for deployment platforms like Render, Railway, etc.)
 const port = process.env.PORT || 3001;
 
 // Middleware

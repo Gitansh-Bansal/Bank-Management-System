@@ -34,6 +34,8 @@ interface Account {
   balance: number;
 }
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
 export default function AccountDetails() {
   const { accountNumber } = useParams<{ accountNumber: string }>();
   const [account, setAccount] = useState<Account | null>(null);
@@ -64,7 +66,7 @@ export default function AccountDetails() {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get(`http://localhost:3001/api/accounts/${accountNumber}`);
+      const response = await axios.get(`${API_BASE_URL}/api/accounts/${accountNumber}`);
       setAccount(response.data);
     } catch (error) {
       console.error('Failed to fetch account details:', error);
@@ -76,7 +78,7 @@ export default function AccountDetails() {
 
   const fetchTransactions = async () => {
     try {
-      const response = await axios.get(`http://localhost:3001/api/transactions/${accountNumber}`);
+      const response = await axios.get(`${API_BASE_URL}/api/transactions/${accountNumber}`);
       setTransactions(response.data.transactions || []);
     } catch (error) {
       console.error('Failed to fetch transactions:', error);
@@ -115,13 +117,13 @@ export default function AccountDetails() {
             password,
           };
 
-      console.log('Making request to:', `http://localhost:3001${endpoint}`);
+      console.log('Making request to:', `${API_BASE_URL}${endpoint}`);
       console.log('Request data (without password):', { 
         ...data, 
         password: '[HIDDEN]' 
       });
 
-      const response = await axios.post(`http://localhost:3001${endpoint}`, data);
+      const response = await axios.post(`${API_BASE_URL}${endpoint}`, data);
       console.log('Transaction response:', response.data);
       
       setOpenDialog(false);
@@ -156,7 +158,7 @@ export default function AccountDetails() {
       setCloseLoading(true);
       setCloseError(null);
       
-      await axios.delete(`http://localhost:3001/api/accounts/${accountNumber}`, {
+      await axios.delete(`${API_BASE_URL}/api/accounts/${accountNumber}`, {
         data: { password: closePassword }
       });
       

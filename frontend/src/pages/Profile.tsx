@@ -22,6 +22,8 @@ interface UserProfile {
   phone: string;
 }
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
 export default function Profile() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -54,7 +56,7 @@ export default function Profile() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(`http://localhost:3001/api/user/profile?username=${user?.username}`);
+      const response = await fetch(`${API_BASE_URL}/api/user/profile?username=${user?.username}`);
       if (response.ok) {
         const data = await response.json();
         setProfile(data);
@@ -88,7 +90,7 @@ export default function Profile() {
   const handleSave = async () => {
     try {
       setError(null);
-      const response = await fetch(`http://localhost:3001/api/user/profile`, {
+      const response = await fetch(`${API_BASE_URL}/api/user/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -163,7 +165,7 @@ export default function Profile() {
         return;
       }
 
-      const response = await fetch(`http://localhost:3001/api/user/change-password`, {
+      const response = await fetch(`${API_BASE_URL}/api/user/change-password`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

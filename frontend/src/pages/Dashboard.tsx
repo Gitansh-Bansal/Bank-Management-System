@@ -67,6 +67,8 @@ const getAccountColor = (type: string) => {
   }
 };
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
 export default function Dashboard() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [openDialog, setOpenDialog] = useState(false);
@@ -86,7 +88,7 @@ export default function Dashboard() {
 
   const fetchAccounts = async () => {
     try {
-      const response = await axios.get(`http://localhost:3001/api/accounts?username=${user?.username}`);
+      const response = await axios.get(`${API_BASE_URL}/api/accounts?username=${user?.username}`);
       setAccounts(response.data.accounts || []);
     } catch (error) {
       console.error('Failed to fetch accounts:', error);
@@ -96,7 +98,7 @@ export default function Dashboard() {
 
   const handleCreateAccount = async () => {
     try {
-      await axios.post('http://localhost:3001/api/accounts', {
+      await axios.post(`${API_BASE_URL}/api/accounts`, {
         username: user?.username,
         type: accountType,
         initialBalance: parseFloat(initialBalance),

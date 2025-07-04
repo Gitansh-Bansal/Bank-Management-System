@@ -1,0 +1,29 @@
+# Node.js dependencies and build
+api/node_modules/
+frontend/node_modules/
+api/bin/
+api/package-lock.json
+frontend/package-lock.json
+
+# C++ build artifacts
+obj/
+api/bin/
+bin/
+
+# Data files (runtime data, not source)
+data/
+
+# Environment variables
+frontend/.env
+api/.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Vercel and Render
+.vercel/
+.render/ 

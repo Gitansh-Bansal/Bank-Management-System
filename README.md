@@ -1,5 +1,8 @@
 # Sampatti Bank - Bank Management System
 
+**Live Website:** [https://bank-management-system-vert.vercel.app/](https://bank-management-system-vert.vercel.app/)
+**API Endpoint:** [https://bank-management-system-si7g.onrender.com/](https://bank-management-system-si7g.onrender.com/)
+
 A comprehensive C++ project demonstrating all fundamental Object-Oriented Programming (OOP) principles through a fully functional bank management system. The system provides both a console interface and a modern web interface.
 
 ---
@@ -277,5 +280,64 @@ The web application uses a REST API with the following endpoints:
 
 - Gitansh Bansal
 - Shaurya Anant
+
+---
+
+## Production Deployment (Render + Vercel)
+
+### Backend (API) Deployment on Render
+1. **Push your code to GitHub** with the full project structure.
+2. **Create a new Web Service on [Render](https://render.com/):**
+   - Connect your GitHub repo.
+   - Set the root directory to `Bank-Management-System/api`.
+   - Set the build command to:
+     ```sh
+     npm install && npm run build:cpp
+     ```
+   - (If you see errors about `g++` missing, use: `apt-get update && apt-get install -y build-essential && npm install && npm run build:cpp`)
+   - Set the start command to:
+     ```sh
+     npm start
+     ```
+   - Deploy and note your backend URL (e.g., `https://your-app.onrender.com`).
+
+### Frontend Deployment on Vercel
+1. **Create a new project on [Vercel](https://vercel.com/)** and link your GitHub repo.
+2. **Set the environment variable:**
+   - `VITE_API_URL=https://your-app.onrender.com` (replace with your actual backend URL)
+   - Set this in the Vercel dashboard under Project Settings → Environment Variables.
+3. **Deploy the frontend.**
+4. **Routing fix:** Add a `vercel.json` file to the `frontend/` directory:
+   ```json
+   {
+     "rewrites": [
+       { "source": "/(.*)", "destination": "/" }
+     ]
+   }
+   ```
+   This ensures client-side routing works for all URLs.
+
+---
+
+## Environment Variables
+- **Frontend:** Set `VITE_API_URL` to your backend's public URL in Vercel.
+- **Backend:** No special environment variables required unless you add a database or secrets.
+
+---
+
+## Data Storage Note
+- **All data is stored in the `data/` directory on the backend server.**
+- On Render (and most cloud hosts), this storage is **ephemeral**: data will be lost on redeploys, restarts, or scaling events.
+- For persistent storage, use a managed database and update the C++ code to use it.
+
+---
+
+## .gitignore
+- The repository includes a `.gitignore` to exclude:
+  - `node_modules/`, build artifacts, and binaries
+  - `data/` directory (runtime data)
+  - `.env` files (environment variables)
+  - OS and log files
+- This keeps your repository clean and secure.
 
 ---

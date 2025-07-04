@@ -28,7 +28,7 @@ app.post('/api/auth/login', (req, res) => {
   }
 
   // Get the absolute path to the bank_app executable
-  const bankAppPath = path.join(__dirname, '..', 'bin', process.platform === 'win32' ? 'bank.exe' : 'bank');
+  const bankAppPath = path.join(__dirname, 'bin', process.platform === 'win32' ? 'bank.exe' : 'bank');
 
   // Spawn the C++ backend process
   const backend = spawn(bankAppPath, ['login', username, password]);
@@ -124,7 +124,7 @@ app.post('/api/auth/register', (req, res) => {
   }
 
   // Get the absolute path to the bank_app executable
-  const bankAppPath = path.join(__dirname, '..', 'bin', process.platform === 'win32' ? 'bank.exe' : 'bank');
+  const bankAppPath = path.join(__dirname, 'bin', process.platform === 'win32' ? 'bank.exe' : 'bank');
 
   // Spawn the C++ backend process
   const backend = spawn(bankAppPath, ['register', name, phone, username, password]);
@@ -169,7 +169,7 @@ app.get('/api/accounts', (req, res) => {
   }
 
   // Get the absolute path to the bank_app executable
-  const bankAppPath = path.join(__dirname, '..', 'bin', process.platform === 'win32' ? 'bank.exe' : 'bank');
+  const bankAppPath = path.join(__dirname, 'bin', process.platform === 'win32' ? 'bank.exe' : 'bank');
 
   // Spawn the C++ backend process
   const backend = spawn(bankAppPath, ['get-accounts', username]);
@@ -217,7 +217,7 @@ app.post('/api/accounts', (req, res) => {
   }
 
   // Get the absolute path to the bank_app executable
-  const bankAppPath = path.join(__dirname, '..', 'bin', process.platform === 'win32' ? 'bank.exe' : 'bank');
+  const bankAppPath = path.join(__dirname, 'bin', process.platform === 'win32' ? 'bank.exe' : 'bank');
 
   // Spawn the C++ backend process
   const backend = spawn(bankAppPath, ['create-account', username, password, type, initialBalance.toString()]);
@@ -264,7 +264,7 @@ app.post('/api/transactions/deposit', (req, res) => {
   }
 
   // Get the absolute path to the bank_app executable
-  const bankAppPath = path.join(__dirname, '..', 'bin', process.platform === 'win32' ? 'bank.exe' : 'bank');
+  const bankAppPath = path.join(__dirname, 'bin', process.platform === 'win32' ? 'bank.exe' : 'bank');
   console.log('Using backend path:', bankAppPath);
 
   // Spawn the C++ backend process
@@ -310,7 +310,7 @@ app.post('/api/transactions/withdraw', (req, res) => {
   }
 
   // Get the absolute path to the bank_app executable
-  const bankAppPath = path.join(__dirname, '..', 'bin', process.platform === 'win32' ? 'bank.exe' : 'bank');
+  const bankAppPath = path.join(__dirname, 'bin', process.platform === 'win32' ? 'bank.exe' : 'bank');
 
   // Spawn the C++ backend process
   const backend = spawn(bankAppPath, ['withdraw', accountNumber.toString(), amount.toString(), password]);
@@ -347,7 +347,7 @@ app.post('/api/transactions/transfer', (req, res) => {
   }
 
   // Get the absolute path to the bank_app executable
-  const bankAppPath = path.join(__dirname, '..', 'bin', process.platform === 'win32' ? 'bank.exe' : 'bank');
+  const bankAppPath = path.join(__dirname, 'bin', process.platform === 'win32' ? 'bank.exe' : 'bank');
 
   // Spawn the C++ backend process
   const backend = spawn(bankAppPath, ['transfer', fromAccount.toString(), toAccount.toString(), amount.toString(), password]);
@@ -384,7 +384,7 @@ app.get('/api/transactions/:accountNumber', (req, res) => {
   }
 
   // Get the absolute path to the bank_app executable
-  const bankAppPath = path.join(__dirname, '..', 'bin', process.platform === 'win32' ? 'bank.exe' : 'bank');
+  const bankAppPath = path.join(__dirname, 'bin', process.platform === 'win32' ? 'bank.exe' : 'bank');
 
   // Spawn the C++ backend process
   const backend = spawn(bankAppPath, ['get-transactions', accountNumber]);
@@ -426,7 +426,7 @@ app.get('/api/accounts/:accountNumber', (req, res) => {
   }
 
   // Get the absolute path to the bank_app executable
-  const bankAppPath = path.join(__dirname, '..', 'bin', process.platform === 'win32' ? 'bank.exe' : 'bank');
+  const bankAppPath = path.join(__dirname, 'bin', process.platform === 'win32' ? 'bank.exe' : 'bank');
 
   // Spawn the C++ backend process
   const backend = spawn(bankAppPath, ['get-account', accountNumber]);
@@ -475,7 +475,7 @@ app.delete('/api/accounts/:accountNumber', (req, res) => {
   }
 
   // Get the absolute path to the bank_app executable
-  const bankAppPath = path.join(__dirname, '..', 'bin', process.platform === 'win32' ? 'bank.exe' : 'bank');
+  const bankAppPath = path.join(__dirname, 'bin', process.platform === 'win32' ? 'bank.exe' : 'bank');
 
   // Spawn the C++ backend process
   const backend = spawn(bankAppPath, ['close-account', accountNumber.toString(), password]);
@@ -512,7 +512,7 @@ app.get('/api/user/profile', (req, res) => {
   }
 
   // Get the absolute path to the bank_app executable
-  const bankAppPath = path.join(__dirname, '..', 'bin', process.platform === 'win32' ? 'bank.exe' : 'bank');
+  const bankAppPath = path.join(__dirname, 'bin', process.platform === 'win32' ? 'bank.exe' : 'bank');
 
   // Spawn the C++ backend process
   const backend = spawn(bankAppPath, ['get-user', username]);
@@ -558,7 +558,7 @@ app.put('/api/user/profile', (req, res) => {
   }
 
   // Get the absolute path to the bank_app executable
-  const bankAppPath = path.join(__dirname, '..', 'bin', process.platform === 'win32' ? 'bank.exe' : 'bank');
+  const bankAppPath = path.join(__dirname, 'bin', process.platform === 'win32' ? 'bank.exe' : 'bank');
 
   // Spawn the C++ backend process
   const backend = spawn(bankAppPath, ['update-profile', username, name, phone]);
@@ -599,7 +599,7 @@ app.put('/api/user/change-password', (req, res) => {
   }
 
   // Get the absolute path to the bank_app executable
-  const bankAppPath = path.join(__dirname, '..', 'bin', process.platform === 'win32' ? 'bank.exe' : 'bank');
+  const bankAppPath = path.join(__dirname, 'bin', process.platform === 'win32' ? 'bank.exe' : 'bank');
 
   // Spawn the C++ backend process
   const backend = spawn(bankAppPath, ['change-password', username, currentPassword, newPassword]);

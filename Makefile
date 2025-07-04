@@ -5,7 +5,7 @@ CXXFLAGS = -std=c++17 -Wall -Wextra -I./include
 # Project structure
 SRC_DIR = src
 OBJ_DIR = obj
-BIN_DIR = bin
+BIN_DIR = api/bin
 
 # Source files
 SRCS = $(wildcard $(SRC_DIR)/*.cpp)
